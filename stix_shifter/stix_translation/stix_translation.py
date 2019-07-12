@@ -9,6 +9,7 @@ from stix_shifter.stix_translation.src.modules.cim import cim_data_mapping
 from stix_shifter.stix_translation.src.modules.car import car_data_mapping
 from stix_shifter.stix_translation.src.utils.unmapped_attribute_stripper import strip_unmapped_attributes
 import sys
+from xml.etree import ElementTree as ET
 
 TRANSLATION_MODULES = ['qradar', 'dummy', 'car', 'cim', 'splunk', 'elastic', 'bigfix', 'csa', 'csa:at', 'csa:nf', 'aws_security_hub', 'carbonblack', 'elastic_ecs', 'proxy', 'stix_bundle']
 
@@ -19,6 +20,7 @@ DEFAULT_LIMIT = 10000
 DEFAULT_TIMERANGE = 5
 START_STOP_PATTERN = "\s?START\s?t'\d{4}(-\d{2}){2}T\d{2}(:\d{2}){2}(\.\d+)?Z'\sSTOP\s?t'\d{4}(-\d{2}){2}T(\d{2}:){2}\d{2}.\d{1,3}Z'\s?"
 SHARED_DATA_MAPPERS = {'elastic': car_data_mapping, 'splunk': cim_data_mapping, 'cim': cim_data_mapping, 'car': car_data_mapping}
+BIGFIX_MODULE = 'bigfix'
 
 
 class StixTranslation:
@@ -35,6 +37,40 @@ class StixTranslation:
         errors = run_validator(pattern_without_start_stop)
         if (errors != []):
             raise StixValidationException("The STIX pattern has the following errors: {}".format(errors))
+
+    @staticmethod
+    def parse_details_in_data(parse_field, data):
+        """ Help doc TODO"""
+        purged_data = None
+        comparator, target_folder = [], []
+        regex_lookup = {'folder': "(?P<comparator>\s[A-Z]+\s{0,1})*(?P<match_query>file:parent_directory_ref.path\s{1}\=\s{1})(?P<target_folder>\'\/\w+\')\s?(\s[A-Z]+\s{0,1})*"}
+        compiled_regex = re.compile(regex_lookup.get(parse_field))
+        for each_regex in compiled_regex.finditer(data):
+            if each_regex.group('comparator'):
+                comparator_value = each_regex.group('comparator').strip()
+            else:
+                comparator_value = each_regex.group('comparator')
+            comparator.append(comparator_value)
+            target_folder.append(each_regex.group('target_folder'))
+        purged_data = compiled_regex.sub(' ', data)
+        if parse_field.lower() == 'folder':
+            compiled_regex_remove_preceed_comparator = re.compile('^(\'\[)([\sA-Z]*)')
+            purged_data = compiled_regex_remove_preceed_comparator.sub('\g<1>', purged_data)
+        if not target_folder:
+            target_folder.append('"/root"')
+        return purged_data, target_folder
+
+    @staticmethod
+    def parse_modify_xml(query, param, stix_object, tag_name='QueryText'):
+        """Help doc TODO"""
+        # Need to handle if param is list
+        stix_format_string_lookup = {'folder': ' of folder ("{}")'.format(param[0].replace("'", ""))}
+        et = ET.fromstring(query)
+        query_to_modify = et.find('.//{}'.format(tag_name)).text
+        query_to_modify += stix_format_string_lookup.get(stix_object)
+        et.find('.//{}'.format(tag_name)).text = query_to_modify
+        final_query = ET.tostring(et)
+        return final_query
 
     def translate(self, module, translate_type, data_source, data, options={}, recursion_limit=1000):
         """
@@ -91,12 +127,19 @@ class StixTranslation:
                     except Exception as ex:
                         print("Data model mapper not found for {} so attempting to use CAR or CIM".format(module))
                         data_model_mapper = self._cim_or_car_data_mapper(module, options)
+                    # <----- MODIFIED BY RAGHUVARAN
+                    # Code for checking for path in data and remove the same before generating antlr parser
+                    if module.lower() == BIGFIX_MODULE.lower():
+                        data, target_folder = self.parse_details_in_data('folder', data)
+                    # ------ MODIFIED BY RAGHUVARAN ---->
                     antlr_parsing = generate_query(data)
                     if data_model_mapper:
                         # Remove unmapped STIX attributes from antlr parsing
                         antlr_parsing = strip_unmapped_attributes(antlr_parsing, data_model_mapper)
                     # Converting STIX pattern to datasource query
                     queries = interface.transform_query(data, antlr_parsing, data_model_mapper, options)
+                    if module.lower() == BIGFIX_MODULE.lower():
+                        queries = self.parse_modify_xml(queries, target_folder, 'folder')
                     return {'queries': queries}
                 else:
                     self._validate_pattern(data)
