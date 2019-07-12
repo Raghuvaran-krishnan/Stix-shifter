@@ -1,0 +1,10 @@
+{
+  "file": {
+    "fields": {
+      "name": ["name"],
+        "hashes.SHA-256": ["sha256"],
+        "hashes.SHA-1": ["sha1"],
+        "hashes.md5": ["md5"]
+      }
+    }
+  }
