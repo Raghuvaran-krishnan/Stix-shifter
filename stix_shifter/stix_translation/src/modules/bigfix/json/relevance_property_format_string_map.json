@@ -1,0 +1,15 @@
+{
+  "property_format_string_mapping":
+  {
+    "1" : "{mapped_field} of it as lowercase {comparator} {value} as lowercase",
+    "2" : "{mapped_field} of it  '{value}' as time"
+  },
+  "property":
+  {
+    "name" : "1",
+    "sha256" : "1",
+    "sha1" : "1",
+    "md5" : "1",
+    "modification_time" : "2"
+  }
+}

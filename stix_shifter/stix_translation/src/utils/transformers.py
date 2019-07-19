@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo, timedelta
 import base64
 import socket
 import re
@@ -174,3 +174,31 @@ def get_all_transformers():
             "ToLowercaseArray": ToLowercaseArray, "ToBase64": ToBase64, "ToFilePath": ToFilePath, "ToFileName": ToFileName,
             "StringToBool": StringToBool, "ToDomainName": ToDomainName, "TimestampToMilliseconds": TimestampToMilliseconds,
             "EpochSecondsToTimestamp": EpochSecondsToTimestamp, "ToIPv4": ToIPv4, "DateTimeToUnixTimestamp": DateTimeToUnixTimestamp}
+
+
+class NaiveToUTC(tzinfo):
+    _dst = timedelta(0)
+
+    def tzname(self,**kwargs):
+        return "UTC"
+
+    def utcoffset(self, dt):
+        return self.__class__._dst
+
+    def dst(self, dt):
+        return self.__class__._dst
+
+
+class TimestampToUTC:
+    """
+    A value transformer for converting a UTC timestamp (YYYY-MM-DDThh:mm:ss.000Z)
+    to %d %b %Y %H:%M:%S %z"(23 Oct 2018 12:20:14 +0000)
+    """
+
+    @staticmethod
+    def transform(timestamp):
+        input_time_pattern = '%Y-%m-%dT%H:%M:%S.%fZ'
+        output_time_pattern = '%d %b %Y %H:%M:%S %z'
+        datetime_obj = datetime.strptime(timestamp, input_time_pattern) # convert timestamp to datetime object
+        converted_time = datetime.strftime(datetime_obj.replace(tzinfo=NaiveToUTC()), output_time_pattern)
+        return converted_time
