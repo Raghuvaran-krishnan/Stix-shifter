@@ -177,9 +177,12 @@ def get_all_transformers():
 
 
 class NaiveToUTC(tzinfo):
+    """
+        A class for converting naive datetime object to UTC timezone datetime object
+        """
     _dst = timedelta(0)
 
-    def tzname(self,**kwargs):
+    def tzname(self, **kwargs):
         return "UTC"
 
     def utcoffset(self, dt):
@@ -196,9 +199,12 @@ class TimestampToUTC:
     """
 
     @staticmethod
-    def transform(timestamp):
+    def transform(timestamp, is_default = False):
         input_time_pattern = '%Y-%m-%dT%H:%M:%S.%fZ'
         output_time_pattern = '%d %b %Y %H:%M:%S %z'
-        datetime_obj = datetime.strptime(timestamp, input_time_pattern) # convert timestamp to datetime object
+        if not is_default:
+            datetime_obj = datetime.strptime(timestamp, input_time_pattern) # convert timestamp to datetime object
+        else:
+            datetime_obj = timestamp
         converted_time = datetime.strftime(datetime_obj.replace(tzinfo=NaiveToUTC()), output_time_pattern)
         return converted_time

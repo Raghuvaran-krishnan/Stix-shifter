@@ -1,15 +1,28 @@
 {
   "property_format_string_mapping":
   {
-    "1" : "{mapped_field} of it as lowercase {comparator} {value} as lowercase",
-    "2" : "{mapped_field} of it  '{value}' as time"
+    "generic_format_string" : "{mapped_field} of it as lowercase {comparator} {value} as lowercase",
+    "time_range_format_string" : "{mapped_field} of it is {comparator_1} {start_value} as time {comparator} {mapped_field} of it is {comparator_2} {end_value} as time",
+    "match_operation_format_string" : "exist {comparator}({value}) of {mapped_field} of it"
   },
-  "property":
+  "default_property":
   {
-    "name" : "1",
-    "sha256" : "1",
-    "sha1" : "1",
-    "md5" : "1",
-    "modification_time" : "2"
+        "=" : "generic_format_string",
+        "!=" : "generic_format_string",
+        "contains" : "generic_format_string",
+        "matches" : "match_operation_format_string"
+  },
+  "qualifier":
+  {
+    "file" :
+    {
+      "mapped_field" : "modification time",
+      "format_pattern" : "time_range_format_string"
+    },
+    "process" :
+    {
+      "mapped_field" : "start time",
+      "format_pattern" : "time_range_format_string"
+    }
   }
 }

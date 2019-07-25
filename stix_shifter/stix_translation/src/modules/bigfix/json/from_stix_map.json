@@ -5,15 +5,12 @@
         "hashes.SHA-256": ["sha256"],
         "hashes.SHA-1": ["sha1"],
         "hashes.md5": ["md5"],
-        "parent_directory_ref.path" : ["search_folder"]
+        "parent_directory_ref.path" : ["folder"]
       }
     },
   "process": {
     "fields": {
-      "name": ["name"],
-      "hashes.SHA-256": ["sha256 of image file"],
-      "hashes.SHA-1": ["sha1 of image file"],
-      "hashes.md5": ["md5 of image file"]
+      "name": ["name"]
     }
   }
 }
