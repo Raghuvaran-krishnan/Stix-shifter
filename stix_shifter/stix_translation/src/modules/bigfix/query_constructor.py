@@ -4,7 +4,7 @@ __copyright__ = "Copyright 2019, IBM Client"
 __credits__ = ["Muralidhar K, Aarthi Pushkala Sen Rajamanickam, Raghuvaran Krishnan, Jayapradha Sivaperuman,"
               " Amalraj Arockiam, Subhash Chandra Bose N, Annish Prashanth Stevin Shankar, Karthick Rajagopal"]
 __license__ = ""
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __maintainer__ = "Muralidhar K"
 __email__ = "Muralidhar K-ERS,HCLTech <murali_k@hcl.com>"
 __status__ = "Development"
@@ -26,7 +26,7 @@ IMAGE_FILE = 'image file'
 PROCESS_OBJECT = 'process'
 FILE_OBJECT = 'file'
 DEFAULT_SEARCH_FOLDER = '"/root"'
-HASHES_PROPERTY = '[sha256|sha1|md5]'
+HASHES_PROPERTY = '(sha256|sha1|md5)'
 RELEVANCE_PROPERTY_MAP_JSON = "json/relevance_property_format_string_map.json"
 START_STOP_PATTERN = "\d{4}(-\d{2}){2}T\d{2}(:\d{2}){2}(\.\d+)?Z"
 QUALIFIER_COMP_TUPLE = ("greater than or equal to", "AND", "less than or equal to")
@@ -372,9 +372,9 @@ class RelevanceQueryStringPatternTranslator:
             if object_type == PROCESS_OBJECT:
                 compile_regex_remove_image_string = re.compile('(?P<hashes_property>{}) of it'.format(HASHES_PROPERTY))
                 for each_match in compile_regex_remove_image_string.finditer(relevance_query):
-                    relevance_query = compile_regex_remove_image_string.sub('{} of image file'.
+                    relevance_query = compile_regex_remove_image_string.sub('{} of image file of it'.
                                                                             format(each_match.group('hashes_property')),
-                                                                            relevance_query)
+                                                                            relevance_query, count=1)
             self.qualifier_string = self._parse_time_range(qualifier, object_type,
                                                            self._relevance_property_format_string_dict,
                                                            QUALIFIER_COMP_TUPLE, self._time_range)
