@@ -1,28 +1,108 @@
 {
   "property_format_string_mapping":
   {
-    "generic_format_string" : "{mapped_field} of it as lowercase {comparator} {value} as lowercase",
-    "time_range_format_string" : "{mapped_field} of it is {comparator_1} {start_value} as time {comparator} {mapped_field} of it is {comparator_2} {end_value} as time",
-    "match_operation_format_string" : "exist {comparator}({value}) of {mapped_field} of it"
+    "format_string_generic" : "{mapped_field} of it {comparator} {value}",
+    "format_string_process_file_eq_neq_contain" : "{mapped_field} of image file of it {comparator} {value}",
+    "format_string_network_process_eq_neq_contain" : "{mapped_field} of process of it {comparator} {value}",
+    "format_string_lowercase" : "{mapped_field} of it as lowercase {comparator} {value} as lowercase",
+    "format_string_time_range" : "{mapped_field} of it is {comparator_1} {start_value} as time {comparator} {mapped_field} of it is {comparator_2} {end_value} as time",
+    "format_string_network_time_range" : "{mapped_field} of process of it is {comparator_1} {start_value} as time {comparator} {mapped_field} of process of it is {comparator_2} {end_value} as time",
+    "format_string_generic_match" : "exist {comparator}({value}) of {mapped_field} of it",
+    "format_string_process_file_match" : "exist {comparator}({value}) of {mapped_field} of image file of it"
   },
-  "default_property":
+  "default_comparator_property":
   {
-        "=" : "generic_format_string",
-        "!=" : "generic_format_string",
-        "contains" : "generic_format_string",
-        "matches" : "match_operation_format_string"
+        "=" : "format_string_generic",
+        "!=" : "format_string_generic",
+        "contains" : "format_string_generic",
+        "matches" : "format_string_generic_match",
+        "is less than" : "format_string_generic",
+        "is less than or equal to" : "format_string_generic",
+        "is greater than" : "format_string_generic",
+        "is greater than or equal" : "format_string_generic"
+  },
+  "file_comparator_property":
+  {
+    "file" :
+    {
+        "=" : "format_string_lowercase",
+        "!=" : "format_string_lowercase"
+    }
+  },
+  "process_comparator_property":
+  {
+    "process":
+    {
+        "=" : "format_string_lowercase",
+        "!=" : "format_string_lowercase"
+    },
+    "file":
+    {
+      "=" : "format_string_process_file_eq_neq_contain",
+      "!=" : "format_string_process_file_eq_neq_contain",
+      "contains" : "format_string_process_file_eq_neq_contain",
+      "matches" : "format_string_process_file_match"
+    }
+  },
+  "network_comparator_property":
+  {
+    "process" :
+    {
+      "=" : "format_string_network_process_eq_neq_contain",
+      "!=" : "format_string_network_process_eq_neq_contain"
+    }
   },
   "qualifier":
   {
     "file" :
     {
       "mapped_field" : "modification time",
-      "format_pattern" : "time_range_format_string"
+      "format_pattern" : "format_string_time_range",
+      "add_timestamp_to_relevance" : 1
     },
     "process" :
     {
       "mapped_field" : "start time",
-      "format_pattern" : "time_range_format_string"
+      "format_pattern" : "format_string_time_range",
+      "add_timestamp_to_relevance" : 0
+    },
+    "network" :
+    {
+      "mapped_field" : "start time",
+      "format_pattern" : "format_string_network_time_range",
+      "add_timestamp_to_relevance" : 1
+    }
+  },
+  "stix_property_to_observable_object_mapping":
+  {
+    "file" : "file",
+    "process" : "process",
+    "ipv4-addr" : "network",
+    "ipv6-addr" : "network",
+    "network-traffic" : "network"
+  },
+  "combined_comp_exp_to_obs_obj_mapping":
+  {
+    "file-process" : "process",
+    "network-process" : "network"
+  },
+  "relevance_qry_closing_string":
+  {
+    "file" :
+    {
+      "add_qry_closing_string" : 1,
+      "format_string" : " \" of {} ({})\".format(SEARCH_FOLDER, self.search_folder)"
+    },
+    "network" :
+    {
+      "add_qry_closing_string" : 1,
+      "format_string" : "\" of {}\".format(NETWORK)"
+    },
+    "process" :
+    {
+      "add_qry_closing_string" : 1,
+      "format_string" : ""
     }
   }
+
 }

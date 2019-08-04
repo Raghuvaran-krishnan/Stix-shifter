@@ -1,16 +1,52 @@
 {
   "file": {
     "fields": {
-      "name": ["name"],
-        "hashes.SHA-256": ["sha256"],
-        "hashes.SHA-1": ["sha1"],
-        "hashes.md5": ["md5"],
-        "parent_directory_ref.path" : ["folder"]
-      }
-    },
+      "name": [
+        "name"
+      ],
+      "hashes.SHA-256": [
+        "sha256"
+      ],
+      "hashes.SHA-1": [
+        "sha1"
+      ],
+      "hashes.md5": [
+        "md5"
+      ],
+      "parent_directory_ref.path": [
+        "folder"
+      ]
+    }
+  },
   "process": {
     "fields": {
-      "name": ["name"]
+      "name": [
+        "name"
+      ]
+    }
+  },
+  "ipv4-addr": {
+    "fields": {
+      "value": [
+        "local address",
+        "remote address"
+      ]
+    }
+  },
+  "ipv6-addr": {
+    "fields": {
+      "value": [
+        "local address",
+        "remote address"
+      ]
+    }
+  },
+  "network-traffic": {
+    "fields": {
+      "src_port": ["local port"],
+      "dst_port": ["remote port"],
+      "src_ref.value": ["local address"],
+      "dst_ref.value": ["remote address"]
     }
   }
 }

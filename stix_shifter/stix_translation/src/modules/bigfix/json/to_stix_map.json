@@ -13,7 +13,7 @@
             "object": "file",
             "references": "directory"
         },
-        {   
+        {
             "key": "process.binary_ref",
             "object": "process",
             "references": "file"
@@ -73,9 +73,24 @@
             "cybox": false
         }
     ],
-    "computer_identity":
-    {
+    "computer_identity": {
         "key": "name",
         "cybox": false
-    } 
+    },
+    "local address":
+        [
+            {
+                "key": "ipv4-addr.value",
+                "object": "src_ip"
+            },
+            {
+                "key": "ipv6-addr.value",
+                "object": "src_ip"
+            },
+            {
+                "key": "network-traffic.src_ref",
+                "object": "nt",
+                "references": "src_ip"
+            }
+        ]
 }
