@@ -4,7 +4,7 @@ __copyright__ = "Copyright 2019, IBM Client"
 __credits__ = ["Muralidhar K, Aarthi Pushkala Sen Rajamanickam, Raghuvaran Krishnan, Jayapradha Sivaperuman,"
               " Amalraj Arockiam, Subhash Chandra Bose N, Annish Prashanth Stevin Shankar, Karthick Rajagopal"]
 __license__ = ""
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 __maintainer__ = "Muralidhar K"
 __email__ = "Muralidhar K-ERS,HCLTech <murali_k@hcl.com>"
 __status__ = "Development"
@@ -21,18 +21,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 SEARCH_FOLDER = 'folder'
-NETWORK = "network"
-IMAGE_FILE = 'image file'
-PROCESS_OBJECT = 'process'
-FILE_OBJECT = 'file'
-NETWORK_OBJECT = 'network'
+SOCKET = "socket"
+FILE = "file"
 DEFAULT_SEARCH_FOLDER = '"/root"'
-HASHES_PROPERTY = '(sha256|sha1|md5)'
 RELEVANCE_PROPERTY_MAP_JSON = "json/relevance_property_format_string_map.json"
 START_STOP_PATTERN = "\d{4}(-\d{2}){2}T\d{2}(:\d{2}){2}(\.\d+)?Z"
-QUALIFIER_COMP_TUPLE = ("greater than or equal to", "AND", "less than or equal to")
 WHOSE_STRING = "whose ({})"
-QUALIFIER = 'qualifier'
 
 
 class RelevanceQueryStringPatternTranslator:
@@ -62,10 +56,14 @@ class RelevanceQueryStringPatternTranslator:
                     process id of it as string | "n/a", "sha256", sha256 of image file of it | "n/a",
                     "sha1", sha1 of image file of it | "n/a", "md5", md5 of image file of it | "n/a",
                     pathname of image file of it | "n/a",
-                    (start time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of processes {}''', 'network': '''
-                    ("Local Address", local address of it as string | "n/a", 
-                    "Remote Address", remote address of it as string | "n/a", "Local port", local port of it | -1, 
-                    "remote port", remote port of it | -1, "Process name", names of processes of it) of sockets {}'''}
+                    (start time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of processes {}''', 'socket': '''
+                    ("Local Address", local address of it as string | "n/a", "Remote Address", remote address of it 
+                    as string | "n/a", "Local port", local port of it | -1, "remote port", remote port of it | -1, 
+                    "Process name", names of processes of it, name of operating system,pid of process of it,
+                    (if (name of operating system as lowercase contains "win" as lowercase) then 
+                    ("Creation time", (creation time of process of it - "01 Jan 1970 00:00:00 +0000" as time)/second) 
+                    else ("Start time", (start time of process of it - "01 Jan 1970 00:00:00 +0000" as time)/second)), 
+                    "TCP", tcp of it, "UDP", udp of it) of sockets {}'''}
 
     def __init__(self, pattern: Pattern, data_model_mapper, result_limit, time_range):
         self.dmm = data_model_mapper
@@ -75,7 +73,11 @@ class RelevanceQueryStringPatternTranslator:
         self.qualified_queries = []
         self.qualifier_string = ''
         self.search_folder = DEFAULT_SEARCH_FOLDER
+        self._master_obj = None
+        self._relevance_string_list = []
         self._relevance_property_format_string_dict = self.load_json(RELEVANCE_PROPERTY_MAP_JSON)
+        self._time_range_comparator_list = [self.comparator_lookup.get(each) for each in
+                                            (ComparisonComparators.GreaterThanOrEqual, ComparisonComparators.LessThanOrEqual)]
         self.parse_expression(pattern)
 
     @staticmethod
@@ -109,7 +111,8 @@ class RelevanceQueryStringPatternTranslator:
         :param values: str
         :return: list
         """
-        return map(lambda x: '"{}"'.format(x), values.element_iterator())
+        return list(map(lambda x: '"{}"'.format(x), values.element_iterator()))
+
 
     @staticmethod
     def _format_like(value) -> str:
@@ -135,7 +138,7 @@ class RelevanceQueryStringPatternTranslator:
         value = value.replace('\\', '&#92;')
         return 'regex"({})"'.format(value)
 
-    def _get_obj_of_obs_exp(self, expression):
+    def get_master_obj_of_obs_exp(self, expression, objects_list):
         """
         Function to parse observation expression and return the object(i.e file, process, network) involved
         :param expression: expression object, ANTLR parsed exrepssion object
@@ -143,21 +146,20 @@ class RelevanceQueryStringPatternTranslator:
         :return: None
         """
         if hasattr(expression, 'object_path'):
-            object_type = expression.object_path.split(':')[0]
-            self._objects_in_obs_exp_dict[object_type] = self._relevance_property_format_string_dict.get\
-                ('stix_property_to_observable_object_mapping').get(object_type)
-            # self._objects_in_obs_exp = list(set(self._objects_in_obs_exp))
-            temp_objects_in_obs_list = list(set(self._objects_in_obs_exp_dict.values()))
-            temp_objects_in_obs_list.sort()
-            self._objects_in_obs_exp_dict['object_type'] = self._relevance_property_format_string_dict. \
-                get('combined_comp_exp_to_obs_obj_mapping').get('-'.join(temp_objects_in_obs_list)) \
-                if len(temp_objects_in_obs_list) > 1 else temp_objects_in_obs_list[0]
+            stix_object, stix_field = expression.object_path.split(':')
+            mapped_field = self.dmm.map_field(stix_object, stix_field)[0]
+            current_comparison_obj = mapped_field.split('.')[0]
+            try:
+                if objects_list.index(current_comparison_obj) > objects_list.index(self._master_obj):
+                    self._master_obj = current_comparison_obj
+            except ValueError:
+                raise ValueError("Unmapped object: {}. Please check from_stix json".format(current_comparison_obj))
         else:
-            self._get_obj_of_obs_exp(expression.expr1)
-            self._get_obj_of_obs_exp(expression.expr2)
+            self.get_master_obj_of_obs_exp(expression.expr1, objects_list)
+            self.get_master_obj_of_obs_exp(expression.expr2, objects_list)
 
     @staticmethod
-    def _parse_time_range(qualifier, stix_obj, relevance_map_dict, comparator_tuple, time_range):
+    def _parse_time_range(qualifier, stix_obj, relevance_map_dict, time_range, range_operator_list):
         """
         Format the input time range i.e <START|STOP>t'2019-04-20T10:43:10.003Z to
         %d %b %Y %H:%M:%S %z"(i.e 23 Oct 2018 12:20:14 +0000)
@@ -169,11 +171,45 @@ class RelevanceQueryStringPatternTranslator:
         :return: str, format_string bound with time range provided
         """
         format_string = ''
+        format_string_list = []
+        qualifier_master_dict = {
+            "file":
+                {
+                    "mapped_field": ["modification time"],
+                    "extra_mapped_string": "",
+                    "transformer": "as time",
+                    "format_pattern": "format_string_range",
+                    "add_timestamp_to_relevance": 1,
+                    "os_dependency": 0
+                },
+            "process":
+                {
+                    "mapped_field": ["creation time", "start time"],
+                    "extra_mapped_string": "",
+                    "transformer": "as time",
+                    "format_pattern": "format_string_range",
+                    "add_timestamp_to_relevance": 1,
+                    "os_dependency": 1
+                },
+            "socket":
+                {
+                    "mapped_field": ["creation time", "start time"],
+                    "extra_mapped_string": " of process",
+                    "transformer": "as time",
+                    "format_pattern": "format_string_range",
+                    "add_timestamp_to_relevance": 1,
+                    "os_dependency": 1
+                }
+        }
+        condition_format_for_time = """(if (name of operating system as lowercase contains "win" as lowercase) then 
+        {time_exp1} else {time_exp2})"""
+        qualifier_keys_list = ['mapped_field', 'extra_mapped_string', 'transformer']
         try:
-            if relevance_map_dict.get(QUALIFIER).get(stix_obj).get('add_timestamp_to_relevance'):
+            if qualifier_master_dict.get(stix_obj).get('add_timestamp_to_relevance'):
                 compile_timestamp_regex = re.compile(START_STOP_PATTERN)
                 transformer = TimestampToUTC()
-                mapped_field = relevance_map_dict.get(QUALIFIER).get(stix_obj).get('mapped_field')
+                mapped_field, extra_mapped_string, str_transformer = [qualifier_master_dict.get(
+                    stix_obj).get(each_key) for each_key in qualifier_keys_list]
                 if qualifier and compile_timestamp_regex.search(qualifier):
                     time_range_iterator = map(lambda x: transformer.transform(x.group()),
                                               compile_timestamp_regex.finditer(qualifier))
@@ -181,19 +217,45 @@ class RelevanceQueryStringPatternTranslator:
                 else:
                     stop_time = datetime.now()
                     start_time = stop_time - timedelta(minutes=time_range)
-                    time_range_iterator = map(lambda x: transformer.transform(x, is_default=True), [start_time, stop_time])
-                format_string = relevance_map_dict.get('property_format_string_mapping'). \
-                    get(relevance_map_dict.get('qualifier').get(stix_obj).get('format_pattern')). \
-                    format(mapped_field=mapped_field, comparator_1=comparator_tuple[0], start_value='"{}"'.
-                           format(next(time_range_iterator)), comparator=comparator_tuple[1],
-                           comparator_2=comparator_tuple[2], end_value='"{}"'.format(next(time_range_iterator)))
+                    time_range_iterator = map(lambda x: transformer.transform(x, is_default=True),
+                                              [start_time, stop_time])
+                time_range_tuple = [each for each in time_range_iterator]
+                # else:
+                for each in mapped_field:
+                    interim_format_string_list = []
+                    for index_op, each_operator in enumerate(range_operator_list):
+                        interim_format_string_list.append(relevance_map_dict.get('format_string').
+                                                          get(qualifier_master_dict.get(stix_obj).get('format_pattern'))
+                                                          .format(mapped_field=each,
+                                                                  extra_mapped_string=extra_mapped_string,
+                                                                  comparator=each_operator, start_value='"{}"'.
+                                                                  format(time_range_tuple[index_op]),
+                                                                  transformer=str_transformer))
+                    format_string_list.append('({})'.format(' AND '.join(interim_format_string_list)))
+                if qualifier_master_dict.get(stix_obj).get('os_dependency'):
+                    format_string = condition_format_for_time.format(time_exp1=format_string_list[0],
+                                                                     time_exp2=format_string_list[1])
+                else:
+                    format_string = ' '.join(format_string_list)
+                return format_string
         except (KeyError, IndexError, TypeError) as e:
             raise e
-        finally:
-            return format_string
+        return format_string
+
+    def get_field_relevance_qry(self, current_obj, master_obj):
+        if current_obj != master_obj:
+            parent_obj_references_dict = self._relevance_property_format_string_dict.get('object_hierarchy').\
+                get(master_obj).get('reference')
+            if parent_obj_references_dict:
+                for each_key in parent_obj_references_dict:
+                    self._relevance_string_list.insert(0, parent_obj_references_dict.get(each_key))
+                    if current_obj == each_key:
+                        break
+                    else:
+                        self.get_field_relevance_qry(current_obj, each_key)
 
     @staticmethod
-    def _parse_mapped_fields(stix_obj, value, comparator, mapped_fields_array, relevance_map_dict, _obj_in_obs_exp_dict):
+    def _parse_mapped_fields(value, comparator, mapped_fields_array, relevance_string_list, relevance_map_dict):
         """
         Mapping the stix object property with their corresponding property in relevance query
         from_stix_map.json will be used for mapping
@@ -204,39 +266,47 @@ class RelevanceQueryStringPatternTranslator:
         :param relevance_map_dict: dict, relevance_property_format_string_map.json
         :return: str, whose part of the relevance query for each value
         """
-        # To remove if greater than clause
-        default_str = "default"
-        comparator_str = "_comparator_property"
+
+        operator_mapping = {"default": "format_string_generic", "matches": "format_string_match"}
         comparison_string = ""
-        temp_comparison_list = []
-        mapped_fields_count = len(mapped_fields_array)
-        for mapped_field in mapped_fields_array:
+        if isinstance(value, list):
+            comparison_string_list = [[] for _ in value]
+        for index_of_field, mapped_field in enumerate(mapped_fields_array):
+            mapped_field = mapped_field.split('.')[-1]
             if mapped_field.lower() != SEARCH_FOLDER:
-                _obj_of_current_comp_exp = _obj_in_obs_exp_dict.get(stix_obj)
-                comparator_format_string_key = relevance_map_dict.get(_obj_in_obs_exp_dict.get('object_type') +
-                                                                      comparator_str).get(_obj_of_current_comp_exp)\
-                    .get(comparator) if _obj_of_current_comp_exp in relevance_map_dict.\
-                    get(_obj_in_obs_exp_dict.get('object_type') + comparator_str) and comparator in \
-                    relevance_map_dict.get(_obj_in_obs_exp_dict.get('object_type') + comparator_str).\
-                    get(_obj_of_current_comp_exp) else relevance_map_dict.\
-                    get(default_str + comparator_str).get(comparator)
-                value = value.replace('"', '') if value.replace('"', '').isdigit() else value
+                mapped_field = "{} of ".format(mapped_field) if relevance_string_list else mapped_field
+                mapped_field_relevance_string = "{} {} of it".format(mapped_field, ' of '.join(
+                    relevance_string_list)).lstrip()
+                format_string_key = operator_mapping.get(comparator) if comparator in operator_mapping \
+                    else operator_mapping.get('default')
+                if isinstance(value, list):
+                    value = [each.replace('"', '') if each.replace('"', '').isdigit() else each for each in list(value)]
+                    transformer = 'as lowercase' if value[0].replace('"', '').isalpha() else ''if \
+                        value[0].replace('"', '').isdigit() else 'as string'
+                else:
+                    value = value.replace('"', '') if value.replace('"', '').isdigit() else value
+                    transformer = 'as lowercase' if value.replace('"', '').isalpha() else ''if \
+                        value[0].replace('"', '').isdigit() else 'as string'
+                    if comparator == 'contains':
+                        transformer = ''
                 if isinstance(value, str):
-                    comparison_string += relevance_map_dict.get('property_format_string_mapping'). \
-                        get(comparator_format_string_key).format(
-                        mapped_field=mapped_field, comparator=comparator, value=value)
+                    comparison_string += relevance_map_dict.get('format_string'). \
+                        get(format_string_key).format(
+                        mapped_field=mapped_field_relevance_string, transformer=transformer,
+                        comparator=comparator, value=value)
+                    if index_of_field < len(mapped_fields_array)-1:
+                        comparison_string += " OR "
                 # Case of handling IN operation
                 else:
-                    for each_value in value:
-                        temp_comparison_list.append(relevance_map_dict.get('property_format_string_mapping').
-                            get(comparator_format_string_key).format(
-                            mapped_field=mapped_field, comparator=comparator, value=each_value))
-                    comparison_string += "({})".format(' OR '.join(temp_comparison_list))
-            # else:
-            #     comparison_string = ''
-            if mapped_fields_count > 1:
-                comparison_string += " OR "
-                mapped_fields_count -= 1
+                    for index, each_value in enumerate(value):
+                        comparison_string_list[index].append(relevance_map_dict.get('format_string').
+                                                             get(format_string_key).
+                                                             format(mapped_field=mapped_field_relevance_string,
+                                                                    transformer=transformer,comparator=comparator,
+                                                                    value=each_value))
+        if isinstance(value, list):
+            comparison_string += '({})'.format(' OR '.join('({})'.format(' OR '.join(each)) for each in
+                                               comparison_string_list))
         return comparison_string
 
     @staticmethod
@@ -255,14 +325,27 @@ class RelevanceQueryStringPatternTranslator:
         :param qualifier: str, default in None
         :return: None or relevance query as the method call is recursive
         """
+        relevance_qry_termination_string = {
+            "file":
+                {
+                    "add_qry_closing_string": 1,
+                    "format_string": " of {} ({})"
+                },
+            "socket":
+                {
+                    "add_qry_closing_string": 1,
+                    "format_string": " of {}"
+                },
+            "process":
+                {
+                    "add_qry_closing_string": 1,
+                    "format_string": ""
+                }
+        }
         if isinstance(expression, ComparisonExpression):  # Base Case
-             # Resolve STIX Object Path to a field in the target Data Model
+            self._relevance_string_list = []
             stix_object, stix_field = expression.object_path.split(':')
             mapped_fields_array = self.dmm.map_field(stix_object, stix_field)
-            # Below code is for handling [file:name = '*'] i.e all files
-            if expression.value == '*':
-                expression.comparator = ComparisonComparators.Matches
-                expression.value = '.{}'.format(expression.value)
             comparator = self.comparator_lookup[expression.comparator]
             if expression.comparator == ComparisonComparators.In:
                 value = self._format_set(expression.value)
@@ -278,63 +361,38 @@ class RelevanceQueryStringPatternTranslator:
                 value = self._format_matches(expression.value)
             else:
                 raise NotImplementedError("Unknown comparison operator {}.".format(expression.comparator))
-            comparison_string = self._parse_mapped_fields(stix_object, value, comparator, mapped_fields_array,
-                                                          self._relevance_property_format_string_dict,
-                                                          self._objects_in_obs_exp_dict)
-            if SEARCH_FOLDER in mapped_fields_array:
+            self.get_field_relevance_qry(mapped_fields_array[0].split('.')[0], self._master_obj)
+            comparison_string = self._parse_mapped_fields(value, comparator,
+                                                          mapped_fields_array, self._relevance_string_list,
+                                                          self._relevance_property_format_string_dict)
+            if '{}.{}'.format(FILE, SEARCH_FOLDER) in mapped_fields_array:
                 self.search_folder = value
             else:
                 comparison_string = self.clean_format_string(comparison_string)
-            if len(mapped_fields_array) > 1:
-                # More than one data source field maps to the STIX attribute, so group comparisons together.
-                grouped_comparison_string = "(" + comparison_string + ")"
-                comparison_string = grouped_comparison_string
             if expression.negated:
                 comparison_string = self._negate_comparison(comparison_string)
-            # return "{}".format(comparison_string), stix_object
             return "{}".format(comparison_string)
         elif isinstance(expression, CombinedComparisonExpression):
             operator = self.comparator_lookup[expression.operator]
-            # expression_01, object_type1 = self._parse_expression(expression.expr1)
             expression_01 = self._parse_expression(expression.expr1)
-            # expression_02, object_type2 = self._parse_expression(expression.expr2)
             expression_02 = self._parse_expression(expression.expr2)
-            # object_type = PROCESS_OBJECT if object_type2.lower() == PROCESS_OBJECT or \
-            #                                 object_type1.lower() == PROCESS_OBJECT else FILE_OBJECT
             if not expression_01:
-                # return "{}".format(expression_02), object_type
                 return "{}".format(expression_02)
             elif not expression_02:
-                # return "{}".format(expression_01), object_type
                 return "{}".format(expression_01)
             else:
-                # return "{} {} {}".format(expression_01, operator, expression_02), object_type
                 return "{} {} {}".format(expression_01, operator, expression_02)
         elif isinstance(expression, ObservationExpression):
             self.search_folder = DEFAULT_SEARCH_FOLDER
-            # self._objects_in_obs_exp, self._object_type = [], None
-            self._objects_in_obs_exp_dict = {}
-            self._get_obj_of_obs_exp(expression.comparison_expression)
-            print (self._objects_in_obs_exp_dict)
-            _object_type = self._objects_in_obs_exp_dict.get('object_type')
-            # self.objects_in_obs_exp = list(set(self.objects_in_obs_exp))
-            # self.objects_in_obs_exp.sort()
-            # object_type = self._relevance_property_format_string_dict.\
-            #     get('combined_comp_exp_to_obs_obj_mapping').get('-'.join(self.objects_in_obs_exp)) \
-            #     if len(self.objects_in_obs_exp) > 1 else self.objects_in_obs_exp[0]
-            # relevance_query, object_type = self._parse_expression(expression.comparison_expression, qualifier)
+            objects_hierarchy_dict = self._relevance_property_format_string_dict.get('object_hierarchy')
+            objects_list = list(objects_hierarchy_dict.keys())
+            self._master_obj = objects_list[0]
+            self.get_master_obj_of_obs_exp(expression.comparison_expression, objects_list)
             relevance_query = self._parse_expression(expression.comparison_expression)
-            # if _object_type == PROCESS_OBJECT:
-            #     compile_regex_remove_image_string = re.compile('(?P<hashes_property>{}) of it'.format(HASHES_PROPERTY))
-            #     for each_match in compile_regex_remove_image_string.finditer(relevance_query):
-            #         relevance_query = compile_regex_remove_image_string.sub('{} of image file of it'.
-            #                                                                 format(each_match.group('hashes_property')),
-            #                                                                 relevance_query, count=1)
-            self.qualifier_string = self._parse_time_range(qualifier, _object_type,
-                                                           self._relevance_property_format_string_dict,
-                                                           QUALIFIER_COMP_TUPLE, self._time_range)
-            # if ADD_TIMESTAMP_TO_RELEVANCE or self._object_type == FILE_OBJECT:
-            # if relevance_query:
+            self.qualifier_string = self._parse_time_range(qualifier, self._master_obj,
+                                                           self._relevance_property_format_string_dict
+                                                           , self._time_range, self._time_range_comparator_list)
+            self.qualifier_string = self.clean_format_string(self.qualifier_string)
             if self.qualifier_string:
                 # Apply the time range to entire observation expression
                 if relevance_query:
@@ -342,29 +400,21 @@ class RelevanceQueryStringPatternTranslator:
                     relevance_query += ' AND '+self.qualifier_string
                 else:
                     relevance_query += self.qualifier_string
-            # else:
-            #     relevance_query += self.qualifier_string
             relevance_query = WHOSE_STRING.format(relevance_query) if relevance_query else ''
-            temp_qry_closing_dict = self._relevance_property_format_string_dict.get('relevance_qry_closing_string')
-            closing_relevance_string = eval(temp_qry_closing_dict.get(_object_type).get('format_string')) if \
-                temp_qry_closing_dict.get(_object_type).get('add_qry_closing_string') and \
-                temp_qry_closing_dict.get(_object_type).get('format_string') else ""
-            # if self._object_type.lower() == PROCESS_OBJECT:
-            #     closing_relevance_string = ""
-            # elif self._object_type.lower() == NETWORK_OBJECT:
-            #     closing_relevance_string = " of {}".format(NETWORK)
-            # else:
-            #     closing_relevance_string = " of {} ({})".format(SEARCH_FOLDER, self.search_folder)
-            # closing_relevance_string = closing_relevance_string if relevance_query else closing_relevance_string.lstrip()
+            closing_relevance_string = relevance_qry_termination_string.get(self._master_obj).get('format_string') if \
+                relevance_qry_termination_string.get(self._master_obj).get('add_qry_closing_string') and \
+                relevance_qry_termination_string.get(self._master_obj).get('format_string') else ""
+            if self._master_obj == FILE:
+                closing_relevance_string = closing_relevance_string.format(SEARCH_FOLDER, self.search_folder)
+            elif self._master_obj == SOCKET:
+                closing_relevance_string = closing_relevance_string.format(SOCKET)
             final_comparison_exp = self.clean_format_string(self.stix_object_format_string_lookup_dict.
-                                                            get(_object_type)).format(relevance_query)
+                                                            get(self._master_obj)).format(relevance_query)
             final_comparison_exp += closing_relevance_string
             self.qualified_queries.append(final_comparison_exp)
             return None
         elif isinstance(expression, CombinedObservationExpression):
-            # expression_01 = self._parse_expression(expression.expr1, qualifier)
             expression_01 = self._parse_expression(expression.expr1)
-            # expression_02 = self._parse_expression(expression.expr2, qualifier)
             expression_02 = self._parse_expression(expression.expr2)
             if expression_01 and expression_02:
                 self.qualified_queries.extend([expression_01, expression_02])

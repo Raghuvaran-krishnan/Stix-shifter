@@ -1,52 +1,34 @@
 {
   "file": {
     "fields": {
-      "name": [
-        "name"
-      ],
-      "hashes.SHA-256": [
-        "sha256"
-      ],
-      "hashes.SHA-1": [
-        "sha1"
-      ],
-      "hashes.md5": [
-        "md5"
-      ],
-      "parent_directory_ref.path": [
-        "folder"
-      ]
+      "name": ["file.name"],
+      "hashes.SHA-256": ["file.sha256"],
+      "hashes.SHA-1": ["file.sha1"],
+      "hashes.md5": ["file.md5"],
+      "parent_directory_ref.path": ["file.folder"]
     }
   },
   "process": {
     "fields": {
-      "name": [
-        "name"
-      ]
+      "name": ["process.name"]
     }
   },
   "ipv4-addr": {
     "fields": {
-      "value": [
-        "local address",
-        "remote address"
-      ]
+      "value": ["socket.local address","socket.remote address"]
     }
   },
   "ipv6-addr": {
     "fields": {
-      "value": [
-        "local address",
-        "remote address"
-      ]
+      "value": ["socket.local address","socket.remote address"]
     }
   },
   "network-traffic": {
     "fields": {
-      "src_port": ["local port"],
-      "dst_port": ["remote port"],
-      "src_ref.value": ["local address"],
-      "dst_ref.value": ["remote address"]
+      "src_port": ["socket.local port"],
+      "dst_port": ["socket.remote port"],
+      "src_ref.value": ["socket.local address"],
+      "dst_ref.value": ["socket.remote address"]
     }
   }
 }
