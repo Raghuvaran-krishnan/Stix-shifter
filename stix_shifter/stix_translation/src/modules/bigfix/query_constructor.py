@@ -4,7 +4,7 @@ __copyright__ = "Copyright 2019, IBM Client"
 __credits__ = ["Muralidhar K, Aarthi Pushkala Sen Rajamanickam, Raghuvaran Krishnan, Jayapradha Sivaperuman,"
               " Amalraj Arockiam, Subhash Chandra Bose N, Annish Prashanth Stevin Shankar, Karthick Rajagopal"]
 __license__ = ""
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 __maintainer__ = "Muralidhar K"
 __email__ = "Muralidhar K-ERS,HCLTech <murali_k@hcl.com>"
 __status__ = "Development"
@@ -22,6 +22,7 @@ import logging
 logger = logging.getLogger(__name__)
 SEARCH_FOLDER = 'folder'
 SOCKET = "socket"
+NETWORK = "network"
 FILE = "file"
 DEFAULT_SEARCH_FOLDER = '"/root"'
 RELEVANCE_PROPERTY_MAP_JSON = "json/relevance_property_format_string_map.json"
@@ -296,6 +297,9 @@ class RelevanceQueryStringPatternTranslator:
                         comparator=comparator, value=value)
                     if index_of_field < len(mapped_fields_array)-1:
                         comparison_string += " OR "
+                    # Encapsulating within () if mapped_field_array > 1
+                    else:
+                        comparison_string = '({})'.format(comparison_string)
                 # Case of handling IN operation
                 else:
                     for index, each_value in enumerate(value):
@@ -407,7 +411,7 @@ class RelevanceQueryStringPatternTranslator:
             if self._master_obj == FILE:
                 closing_relevance_string = closing_relevance_string.format(SEARCH_FOLDER, self.search_folder)
             elif self._master_obj == SOCKET:
-                closing_relevance_string = closing_relevance_string.format(SOCKET)
+                closing_relevance_string = closing_relevance_string.format(NETWORK)
             final_comparison_exp = self.clean_format_string(self.stix_object_format_string_lookup_dict.
                                                             get(self._master_obj)).format(relevance_query)
             final_comparison_exp += closing_relevance_string
