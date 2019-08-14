@@ -4,7 +4,7 @@ __copyright__ = "Copyright 2019, IBM Client"
 __credits__ = ["Muralidhar K, Aarthi Pushkala Sen Rajamanickam, Raghuvaran Krishnan, Jayapradha Sivaperuman,"
               " Amalraj Arockiam, Subhash Chandra Bose N, Annish Prashanth Stevin Shankar, Karthick Rajagopal"]
 __license__ = ""
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 __maintainer__ = "Muralidhar K"
 __email__ = "Muralidhar K-ERS,HCLTech <murali_k@hcl.com>"
 __status__ = "Development"
@@ -418,8 +418,8 @@ class RelevanceQueryStringPatternTranslator:
             self.qualified_queries.append(final_comparison_exp)
             return None
         elif isinstance(expression, CombinedObservationExpression):
-            expression_01 = self._parse_expression(expression.expr1)
-            expression_02 = self._parse_expression(expression.expr2)
+            expression_01 = self._parse_expression(expression.expr1, qualifier)
+            expression_02 = self._parse_expression(expression.expr2, qualifier)
             if expression_01 and expression_02:
                 self.qualified_queries.extend([expression_01, expression_02])
             elif expression_01:
