@@ -221,7 +221,6 @@ class RelevanceQueryStringPatternTranslator:
                     time_range_iterator = map(lambda x: transformer.transform(x, is_default=True),
                                               [start_time, stop_time])
                 time_range_tuple = [each for each in time_range_iterator]
-                # else:
                 for each in mapped_field:
                     interim_format_string_list = []
                     for index_op, each_operator in enumerate(range_operator_list):

@@ -2,7 +2,7 @@
     "format_string": {
       "format_string_generic": "{mapped_field} {transformer} {comparator} {value} {transformer}",
       "format_string_range": "{mapped_field} {extra_mapped_string} of it {comparator} {start_value} {transformer}",
-      "format_string_match": "exist {comparator}({value}) of {mapped_field}"
+      "format_string_match": "exist {comparator}({value}) of ({mapped_field} {transformer})"
   },
   "object_hierarchy":{
     "file": {
