@@ -77,7 +77,7 @@
         "key": "name",
         "cybox": false
     },
-    "local address":
+    "local_address":
         [
             {
                 "key": "ipv4-addr.value",
@@ -92,5 +92,35 @@
                 "object": "nt",
                 "references": "src_ip"
             }
-        ]
+        ],
+    "remote_address": [
+      {
+      "key": "ipv4-addr.value",
+      "object": "dst_ip"
+      },
+      {
+        "key": "ipv6-addr.value",
+        "object": "dst_ip"
+      },
+      {
+        "key": "network-traffic.dst_ref",
+        "object": "nt",
+        "references": "dst_ip"
+      }
+    ],
+    "local_port": {
+        "key": "network-traffic.src_port",
+        "object": "nt",
+        "transformer": "ToInteger"
+    },
+    "remote_port": {
+        "key": "network-traffic.dst_port",
+        "object": "nt",
+        "transformer": "ToInteger"
+    },
+    "protocol": {
+        "key": "network-traffic.protocols",
+        "object": "nt",
+        "transformer": "ToLowercaseArray"
+    }
 }

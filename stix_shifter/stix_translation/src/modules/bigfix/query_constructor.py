@@ -4,7 +4,7 @@ __copyright__ = "Copyright 2019, IBM Client"
 __credits__ = ["Muralidhar K, Aarthi Pushkala Sen Rajamanickam, Raghuvaran Krishnan, Jayapradha Sivaperuman,"
               " Amalraj Arockiam, Subhash Chandra Bose N, Annish Prashanth Stevin Shankar, Karthick Rajagopal"]
 __license__ = ""
-__version__ = "1.0.6"
+__version__ = "1.0.7"
 __maintainer__ = "Muralidhar K"
 __email__ = "Muralidhar K-ERS,HCLTech <murali_k@hcl.com>"
 __status__ = "Development"
@@ -60,7 +60,7 @@ class RelevanceQueryStringPatternTranslator:
                     (start time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of processes {}''', 'socket': '''
                     ("Local Address", local address of it as string | "n/a", "Remote Address", remote address of it 
                     as string | "n/a", "Local port", local port of it | -1, "remote port", remote port of it | -1, 
-                    "Process name", names of processes of it, name of operating system,pid of process of it,
+                    "Process name", names of processes of it, pid of process of it,
                     (if (name of operating system as lowercase contains "win" as lowercase) then 
                     ("Creation time", (creation time of process of it - "01 Jan 1970 00:00:00 +0000" as time)/second) 
                     else ("Start time", (start time of process of it - "01 Jan 1970 00:00:00 +0000" as time)/second)), 
@@ -288,8 +288,9 @@ class RelevanceQueryStringPatternTranslator:
                     value = value.replace('"', '') if value.replace('"', '').isdigit() else value
                     transformer = 'as lowercase' if value.replace('"', '').isalpha() else ''if \
                         value[0].replace('"', '').isdigit() else 'as string'
+                    # If Comparator is contains then convert the property to "as string"
                     if comparator == 'contains':
-                        transformer = ''
+                        transformer = 'as string'
                 if isinstance(value, str):
                     comparison_string += relevance_map_dict.get('format_string'). \
                         get(format_string_key).format(

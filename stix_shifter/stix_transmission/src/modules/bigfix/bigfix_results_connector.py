@@ -47,7 +47,7 @@ class BigFixResultsConnector(BaseResultsConnector):
             else:
                 raise e
         return json.dumps(return_obj)
-      
+
     @staticmethod
     def format_computer_obj(computer_obj):
         # {"computerID": 12369754, "computerName": "bigdata4545.canlab.ibm.com", "subQueryID": 1, "isFailure": false, "result": "file, .X0-lock, sha256, 7236f966f07259a1de3ee0d48a3ef0ee47c4a551af7f0d76dcabbbb9d6e00940, sha1, 8b5e953be1db90172af66631132f6f27dda402d2, md5, e5307d27f0eb9a27af8597a1ddc51e89, /tmp/.X0-lock, 1541424894", "ResponseTime": 0}
@@ -77,6 +77,17 @@ class BigFixResultsConnector(BaseResultsConnector):
             formatted_obj['md5hash'] = obj_list[7].strip()
             formatted_obj['file_path'] = obj_list[8].strip()
             formatted_obj['modified_time'] = obj_list[9].strip()
+        elif result.lower().startswith('local'):
+            if obj_list[1].strip() != 'n/a':
+                formatted_obj['local_address'] = obj_list[1].strip()
+            if obj_list[3].strip() != 'n/a':
+                formatted_obj['remote_address'] = obj_list[3].strip()
+            formatted_obj['local_port'] = obj_list[5].strip()
+            formatted_obj['remote_port'] = obj_list[7].strip()
+            formatted_obj['process_name'] = obj_list[9].strip()
+            formatted_obj['process_id'] = obj_list[10].strip()
+            formatted_obj['start_time'] = obj_list[12].strip(')').strip()
+            formatted_obj['protocol'] = 'tcp' if obj_list[14].strip() == 'True' else 'udp'
         else:
             print('Unknown result')
 
