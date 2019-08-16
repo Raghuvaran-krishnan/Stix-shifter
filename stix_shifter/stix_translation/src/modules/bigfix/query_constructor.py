@@ -4,7 +4,7 @@ __copyright__ = "Copyright 2019, IBM Client"
 __credits__ = ["Muralidhar K, Aarthi Pushkala Sen Rajamanickam, Raghuvaran Krishnan, Jayapradha Sivaperuman,"
               " Amalraj Arockiam, Subhash Chandra Bose N, Annish Prashanth Stevin Shankar, Karthick Rajagopal"]
 __license__ = ""
-__version__ = "1.0.9"
+__version__ = "1.1.0"
 __maintainer__ = "Muralidhar K"
 __email__ = "Muralidhar K-ERS,HCLTech <murali_k@hcl.com>"
 __status__ = "Development"
@@ -237,10 +237,9 @@ class RelevanceQueryStringPatternTranslator:
                                                                      time_exp2=format_string_list[1])
                 else:
                     format_string = ' '.join(format_string_list)
-                return format_string
+            return format_string
         except (KeyError, IndexError, TypeError) as e:
             raise e
-        return format_string
 
     def get_field_relevance_qry(self, current_obj, master_obj):
         if current_obj != master_obj:
@@ -425,10 +424,6 @@ class RelevanceQueryStringPatternTranslator:
             expression_02 = self._parse_expression(expression.expr2, qualifier)
             if expression_01 and expression_02:
                 self.qualified_queries.extend([expression_01, expression_02])
-            elif expression_01:
-                self.qualified_queries.append(expression_01)
-            elif expression_02:
-                self.qualified_queries.append(expression_02)
         elif isinstance(expression, StartStopQualifier):
             if hasattr(expression, 'observation_expression'):
                 return self._parse_expression(getattr(expression, 'observation_expression'), expression.qualifier)
