@@ -4,7 +4,7 @@ __copyright__ = "Copyright 2019, IBM Client"
 __credits__ = ["Muralidhar K, Aarthi Pushkala Sen Rajamanickam, Raghuvaran Krishnan, Jayapradha Sivaperuman,"
               " Amalraj Arockiam, Subhash Chandra Bose N, Annish Prashanth Stevin Shankar, Karthick Rajagopal"]
 __license__ = ""
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __maintainer__ = "Muralidhar K"
 __email__ = "Muralidhar K-ERS,HCLTech <murali_k@hcl.com>"
 __status__ = "Development"
@@ -125,7 +125,7 @@ class RelevanceQueryStringPatternTranslator:
         # Replacing value with % to .* and _ to . for supporting Like comparator
         compile_regex = re.compile('.*(\%|\_).*')
         if compile_regex.match(value):
-            return 'regex"({}$)"'.format(value.replace('%', '.*').replace('_', '.{1}'))
+            return 'regex"({}$)"'.format(value.replace('%', '.*').replace('_', '.'))
         else:
             return '"{}"'.format(value)
 
