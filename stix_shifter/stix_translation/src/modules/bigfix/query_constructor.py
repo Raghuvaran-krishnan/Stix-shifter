@@ -4,7 +4,7 @@ __copyright__ = "Copyright 2019, IBM Client"
 __credits__ = ["Muralidhar K, Aarthi Pushkala Sen Rajamanickam, Raghuvaran Krishnan, Jayapradha Sivaperuman,"
               " Amalraj Arockiam, Subhash Chandra Bose N, Annish Prashanth Stevin Shankar, Karthick Rajagopal"]
 __license__ = ""
-__version__ = "1.0.7"
+__version__ = "1.0.8"
 __maintainer__ = "Muralidhar K"
 __email__ = "Muralidhar K-ERS,HCLTech <murali_k@hcl.com>"
 __status__ = "Development"
@@ -125,7 +125,7 @@ class RelevanceQueryStringPatternTranslator:
         # Replacing value with % to .* and _ to . for supporting Like comparator
         compile_regex = re.compile('.*(\%|\_).*')
         if compile_regex.match(value):
-            return 'regex"({})"'.format(value.replace('%', '.*').replace('_', '.'))
+            return 'regex"({}$)"'.format(value.replace('%', '.*').replace('_', '.{1}'))
         else:
             return '"{}"'.format(value)
 
@@ -287,14 +287,17 @@ class RelevanceQueryStringPatternTranslator:
                     value = value.replace('"', '') if value.replace('"', '').isdigit() else value
                     transformer = 'as lowercase' if value.replace('"', '').isalpha() else ''if \
                         value[0].replace('"', '').isdigit() else 'as string'
-                    # If Comparator is contains then convert the property to "as string"
+                    # If Comparator is "contains" then convert the property to "as string"
                     if comparator == 'contains':
                         transformer = 'as string'
                 if isinstance(value, str):
+                    transformer_field, transformer_value = (transformer, '') \
+                                                       if (value.startswith('regex') and comparator == 'contains') \
+                                                       else (transformer, transformer)
                     comparison_string += relevance_map_dict.get('format_string'). \
                         get(format_string_key).format(
-                        mapped_field=mapped_field_relevance_string, transformer=transformer,
-                        comparator=comparator, value=value)
+                        mapped_field=mapped_field_relevance_string, transformer_field=transformer_field,
+                        comparator=comparator, value=value, transformer_value=transformer_value)
                     if index_of_field < len(mapped_fields_array)-1:
                         comparison_string += " OR "
                     # Encapsulating within () if mapped_field_array > 1
@@ -306,8 +309,8 @@ class RelevanceQueryStringPatternTranslator:
                         comparison_string_list[index].append(relevance_map_dict.get('format_string').
                                                              get(format_string_key).
                                                              format(mapped_field=mapped_field_relevance_string,
-                                                                    transformer=transformer,comparator=comparator,
-                                                                    value=each_value))
+                                                                    transformer_field=transformer, comparator=comparator,
+                                                                    value=each_value, transformer_value=transformer))
         if isinstance(value, list):
             comparison_string += '({})'.format(' OR '.join('({})'.format(' OR '.join(each)) for each in
                                                comparison_string_list))

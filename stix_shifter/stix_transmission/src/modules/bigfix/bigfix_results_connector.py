@@ -46,7 +46,7 @@ class BigFixResultsConnector(BaseResultsConnector):
                 print('can not parse response: ' + str(response_txt))
             else:
                 raise e
-        return json.dumps(return_obj)
+        return return_obj
 
     @staticmethod
     def format_computer_obj(computer_obj):
