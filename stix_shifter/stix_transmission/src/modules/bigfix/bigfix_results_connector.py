@@ -86,9 +86,16 @@ class BigFixResultsConnector(BaseResultsConnector):
             formatted_obj['remote_port'] = obj_list[7].strip()
             formatted_obj['process_name'] = obj_list[9].strip()
             formatted_obj['process_id'] = obj_list[10].strip()
-            formatted_obj['start_time'] = obj_list[12].strip(')').strip()
-            formatted_obj['protocol'] = 'tcp' if obj_list[14].strip() == 'True' else 'udp'
+            if obj_list[12].strip() != 'n/a':
+                formatted_obj['sha256hash'] = obj_list[12].strip()
+            if obj_list[14].strip() != 'n/a':
+                formatted_obj['sha1hash'] = obj_list[14].strip()
+            if obj_list[16].strip() != 'n/a':
+                formatted_obj['md5hash'] = obj_list[16].strip()
+            if obj_list[17].strip() != 'n/a':
+                formatted_obj['file_path'] = obj_list[17].strip()
+            formatted_obj['start_time'] = obj_list[19].strip(')').strip()
+            formatted_obj['protocol'] = 'tcp' if obj_list[21].strip() == 'True' else 'udp'
         else:
             print('Unknown result')
-
         return formatted_obj

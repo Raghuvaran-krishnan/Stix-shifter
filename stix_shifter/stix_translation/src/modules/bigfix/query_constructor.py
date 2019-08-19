@@ -4,7 +4,7 @@ __copyright__ = "Copyright 2019, IBM Client"
 __credits__ = ["Muralidhar K, Aarthi Pushkala Sen Rajamanickam, Raghuvaran Krishnan, Jayapradha Sivaperuman,"
               " Amalraj Arockiam, Subhash Chandra Bose N, Annish Prashanth Stevin Shankar, Karthick Rajagopal"]
 __license__ = ""
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 __maintainer__ = "Muralidhar K"
 __email__ = "Muralidhar K-ERS,HCLTech <murali_k@hcl.com>"
 __status__ = "Development"
@@ -61,6 +61,10 @@ class RelevanceQueryStringPatternTranslator:
                     ("Local Address", local address of it as string | "n/a", "Remote Address", remote address of it 
                     as string | "n/a", "Local port", local port of it | -1, "remote port", remote port of it | -1, 
                     "Process name", names of processes of it, pid of process of it,
+                    "sha256", sha256 of image files of processes of it | "n/a",
+                    "sha1", sha1 of image files of processes of it | "n/a",
+                     "md5", md5 of image files of processes of it | "n/a",
+                     pathname of image files of processes of it | "n/a",
                     (if (name of operating system as lowercase contains "win" as lowercase) then 
                     ("Creation time", (creation time of process of it - "01 Jan 1970 00:00:00 +0000" as time)/second) 
                     else ("Start time", (start time of process of it - "01 Jan 1970 00:00:00 +0000" as time)/second)), 
@@ -375,8 +379,6 @@ class RelevanceQueryStringPatternTranslator:
                 self.search_folder = value
             else:
                 comparison_string = self.clean_format_string(comparison_string)
-            if expression.negated:
-                comparison_string = self._negate_comparison(comparison_string)
             return "{}".format(comparison_string)
         elif isinstance(expression, CombinedComparisonExpression):
             operator = self.comparator_lookup[expression.operator]
@@ -420,10 +422,8 @@ class RelevanceQueryStringPatternTranslator:
             self.qualified_queries.append(final_comparison_exp)
             return None
         elif isinstance(expression, CombinedObservationExpression):
-            expression_01 = self._parse_expression(expression.expr1, qualifier)
-            expression_02 = self._parse_expression(expression.expr2, qualifier)
-            if expression_01 and expression_02:
-                self.qualified_queries.extend([expression_01, expression_02])
+            self._parse_expression(expression.expr1, qualifier)
+            self._parse_expression(expression.expr2, qualifier)
         elif isinstance(expression, StartStopQualifier):
             if hasattr(expression, 'observation_expression'):
                 return self._parse_expression(getattr(expression, 'observation_expression'), expression.qualifier)
