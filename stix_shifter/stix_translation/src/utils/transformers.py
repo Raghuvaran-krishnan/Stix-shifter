@@ -169,16 +169,12 @@ class DateTimeToUnixTimestamp(ValueTransformer):
             print("Cannot convert input to Unix timestamp")
 
 
-def get_all_transformers():
-    return {"SplunkToTimestamp": SplunkToTimestamp, "EpochToTimestamp": EpochToTimestamp, "ToInteger": ToInteger, "ToString": ToString,
-            "ToLowercaseArray": ToLowercaseArray, "ToBase64": ToBase64, "ToFilePath": ToFilePath, "ToFileName": ToFileName,
-            "StringToBool": StringToBool, "ToDomainName": ToDomainName, "TimestampToMilliseconds": TimestampToMilliseconds,
-            "EpochSecondsToTimestamp": EpochSecondsToTimestamp, "ToIPv4": ToIPv4, "DateTimeToUnixTimestamp": DateTimeToUnixTimestamp}
-
-
 class NaiveToUTC(tzinfo):
     """
         A class for converting naive datetime object to UTC timezone datetime object
+        naive datetime: "2017-09-29T15:00:00
+        datetime with timezone offset: "2017-09-29T15:00:00+0300
+        This class is declared to help convert Naive datetime format to datetime format with timezone(UTC here)
         """
     _dst = timedelta(0)
 
@@ -192,19 +188,36 @@ class NaiveToUTC(tzinfo):
         return self.__class__._dst
 
 
-class TimestampToUTC:
+class TimestampToUTC(ValueTransformer):
     """
     A value transformer for converting a UTC timestamp (YYYY-MM-DDThh:mm:ss.000Z)
     to %d %b %Y %H:%M:%S %z"(23 Oct 2018 12:20:14 +0000)
     """
 
     @staticmethod
-    def transform(timestamp, is_default = False):
+    def transform(timestamp, is_default=False):
+        """
+        Transformer for converting naive or non-naive to UTC time
+        :param timestamp: datetime.datetime object(datetime.datetime(2019, 8, 22, 15, 44, 11, 716805)) or
+                            '2019-07-25T10:43:10.003Z'
+        :param is_default: True if timestamp like '2019-07-25T10:43:10.003Z'
+                            False if timestamp like datetime.datetime(2019, 8, 22, 15, 44, 11, 716805)
+        :return: str, e.g. : 25 Jul 2019 10:43:10 +0000
+        """
         input_time_pattern = '%Y-%m-%dT%H:%M:%S.%fZ'
         output_time_pattern = '%d %b %Y %H:%M:%S %z'
         if not is_default:
-            datetime_obj = datetime.strptime(timestamp, input_time_pattern) # convert timestamp to datetime object
+            # convert timestamp to datetime object
+            datetime_obj = datetime.strptime(timestamp, input_time_pattern)
         else:
             datetime_obj = timestamp
         converted_time = datetime.strftime(datetime_obj.replace(tzinfo=NaiveToUTC()), output_time_pattern)
         return converted_time
+
+
+def get_all_transformers():
+    return {"SplunkToTimestamp": SplunkToTimestamp, "EpochToTimestamp": EpochToTimestamp, "ToInteger": ToInteger, "ToString": ToString,
+            "ToLowercaseArray": ToLowercaseArray, "ToBase64": ToBase64, "ToFilePath": ToFilePath, "ToFileName": ToFileName,
+            "StringToBool": StringToBool, "ToDomainName": ToDomainName, "TimestampToMilliseconds": TimestampToMilliseconds,
+            "EpochSecondsToTimestamp": EpochSecondsToTimestamp, "ToIPv4": ToIPv4,
+            "DateTimeToUnixTimestamp": DateTimeToUnixTimestamp, "NaiveTimestampToUTC": TimestampToUTC}

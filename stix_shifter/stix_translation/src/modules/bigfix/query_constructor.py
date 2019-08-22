@@ -1,14 +1,3 @@
-__author__ = ["Muralidhar K, Aarthi Pushkala Sen Rajamanickam, Raghuvaran Krishnan, Jayapradha Sivaperuman,"
-              " Amalraj Arockiam, Subhash Chandra Bose N, Annish Prashanth Stevin Shankar, Karthick Rajagopal"]
-__copyright__ = "Copyright 2019, IBM Client"
-__credits__ = ["Muralidhar K, Aarthi Pushkala Sen Rajamanickam, Raghuvaran Krishnan, Jayapradha Sivaperuman,"
-               "Amalraj Arockiam, Subhash Chandra Bose N, Annish Prashanth Stevin Shankar, Karthick Rajagopal"]
-__license__ = ""
-__version__ = "1.1.2"
-__maintainer__ = "Muralidhar K"
-__email__ = "Muralidhar K-ERS,HCLTech <murali_k@hcl.com>"
-__status__ = "Development"
-
 from stix_shifter.stix_translation.src.patterns.pattern_objects import ObservationExpression, ComparisonExpression, \
     ComparisonExpressionOperators, ComparisonComparators, Pattern, \
     CombinedComparisonExpression, CombinedObservationExpression, ObservationOperators, StartStopQualifier
@@ -26,40 +15,6 @@ DEFAULT_SEARCH_FOLDER = '"/root"'
 RELEVANCE_PROPERTY_MAP_JSON = "json/relevance_property_format_string_map.json"
 START_STOP_PATTERN = r"\d{4}(-\d{2}){2}T\d{2}(:\d{2}){2}(\.\d+)?Z"
 WHOSE_STRING = "whose ({})"
-STIX_OBJECT_FORMAT_STRING_LOOKUP_DICT = {'file': '''("file", name of it | "n/a",
-                    "sha256", sha256 of it | "n/a","sha1", sha1 of it | "n/a","md5", md5 of it | "n/a",
-                    pathname of it | "n/a",(modification time of it - "01 Jan 1970 00:00:00 +0000" as time)/second)  
-                    of files {}''', 'process': '''( "process", name of it | "n/a",
-                    process id of it as string | "n/a", "sha256", sha256 of image file of it | "n/a",
-                    "sha1", sha1 of image file of it | "n/a", "md5", md5 of image file of it | "n/a",
-                    pathname of image file of it | "n/a",
-                    (start time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of processes {}''', 'socket': '''
-                    ("Local Address", local address of it as string | "n/a", "Remote Address", remote address of it 
-                    as string | "n/a", "Local port", local port of it | -1, "remote port", remote port of it | -1, 
-                    "Process name", names of processes of it, pid of process of it,
-                    "sha256", sha256 of image files of processes of it | "n/a",
-                    "sha1", sha1 of image files of processes of it | "n/a",
-                     "md5", md5 of image files of processes of it | "n/a",
-                     pathname of image files of processes of it | "n/a",
-                    (if (name of operating system as lowercase contains "win" as lowercase) then 
-                    ("Creation time", (creation time of process of it - "01 Jan 1970 00:00:00 +0000" as time)/second) 
-                    else ("Start time", (start time of process of it - "01 Jan 1970 00:00:00 +0000" as time)/second)), 
-                    "TCP", tcp of it, "UDP", udp of it) of sockets {}'''}
-
-
-def load_json(rel_path_of_file):
-    """
-    Consumes the relevance property format string mapping json and returns a dictionary
-
-    :param rel_path_of_file: str, path of relevance property format string mapping json file
-    :return: dictionary
-    """
-    relevance_json_path = path.abspath(path.join(path.join(__file__, ".."), rel_path_of_file))
-    if path.exists(relevance_json_path):
-        with open(relevance_json_path) as f_obj:
-            return json.load(f_obj)
-    else:
-        raise FileNotFoundError
 
 
 class RelevanceQueryStringPatternTranslator:
@@ -79,9 +34,39 @@ class RelevanceQueryStringPatternTranslator:
         ComparisonComparators.LessThanOrEqual: "is less than or equal to",
         ComparisonComparators.In: "=",
         ObservationOperators.Or: 'OR',
+        # Treat AND's as OR's -- Unsure how two ObsExps wouldn't cancel each other out.
         ObservationOperators.And: 'OR'
     }
-    _relevance_property_format_string_dict = load_json(RELEVANCE_PROPERTY_MAP_JSON)
+    _stix_object_format_string_lookup_dict = {
+        'file': '''("file", name of it | "n/a",
+                    "sha256", sha256 of it | "n/a",
+                    "sha1", sha1 of it | "n/a",
+                    "md5", md5 of it | "n/a",
+                    pathname of it | "n/a",
+                    (modification time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of files {}''',
+        'process': '''("process", name of it | "n/a",
+                    process id of it as string | "n/a",
+                    "sha256", sha256 of image file of it | "n/a",
+                    "sha1", sha1 of image file of it | "n/a",
+                    "md5", md5 of image file of it | "n/a",
+                    pathname of image file of it | "n/a",
+                    (start time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of processes {}''',
+        'socket': '''("Local Address", local address of it as string | "n/a",
+                    "Remote Address", remote address of it as string | "n/a",
+                    "Local port", local port of it | -1,
+                    "remote port", remote port of it | -1,
+                    "Process name", names of processes of it,
+                    pid of process of it,
+                    "sha256", sha256 of image files of processes of it | "n/a",
+                    "sha1", sha1 of image files of processes of it | "n/a",
+                    "md5", md5 of image files of processes of it | "n/a",
+                    pathname of image files of processes of it | "n/a",
+                    (if (name of operating system as lowercase contains "win" as lowercase) then
+                    ("Creation time", (creation time of process of it - "01 Jan 1970 00:00:00 +0000" as time)/second)
+                    else ("Start time", (start time of process of it - "01 Jan 1970 00:00:00 +0000" as time)/second)),
+                    "TCP", tcp of it, "UDP", udp of it)
+                    of sockets {}'''
+        }
 
     def __init__(self, pattern: Pattern, data_model_mapper, time_range):
         self.dmm = data_model_mapper
@@ -92,10 +77,25 @@ class RelevanceQueryStringPatternTranslator:
         self.search_folder = DEFAULT_SEARCH_FOLDER
         self._master_obj = None
         self._relevance_string_list = []
+        self._relevance_property_format_string_dict = self.load_json(RELEVANCE_PROPERTY_MAP_JSON)
         self._time_range_comparator_list = [self.comparator_lookup.get(each) for each in
                                             (ComparisonComparators.GreaterThanOrEqual,
                                              ComparisonComparators.LessThanOrEqual)]
         self.parse_expression(pattern)
+
+    @staticmethod
+    def load_json(rel_path_of_file):
+        """
+        Consumes the relevance property format string mapping json and returns a dictionary
+        :param rel_path_of_file: str, path of relevance property format string mapping json file
+        :return: dictionary
+        """
+        relevance_json_path = path.abspath(path.join(path.join(__file__, ".."), rel_path_of_file))
+        if path.exists(relevance_json_path):
+            with open(relevance_json_path) as f_obj:
+                return json.load(f_obj)
+        else:
+            raise FileNotFoundError
 
     @staticmethod
     def _format_equality(value) -> str:
@@ -134,6 +134,9 @@ class RelevanceQueryStringPatternTranslator:
     def _format_matches(value) -> str:
         """
         Formatting value in the event of MATCHES operation
+        &#92; is the ascii equivalent of r'\'(backslash)
+        We are converting all inbound \\(double backslash) with r'\'(backslash) so as to escape character
+        having special meaning
         :param value: str
         :return: str
         """
@@ -142,9 +145,15 @@ class RelevanceQueryStringPatternTranslator:
 
     def get_master_obj_of_obs_exp(self, expression, objects_list):
         """
-        Function to parse observation expression and return the object(i.e file, process, network) involved
-        :param expression: expression object, ANTLR parsed exrepssion object
-        :param relevance_map_dict: dict, relevance property format string
+        Function to parse observation expression and return a single master object(i.e file, process, socket) involved
+        The logic of this function is
+            - Observation expression is de-capsulated until a single comparison expression is available
+            - Object of current comparison exp is parsed i.e (file:name ==> file)
+            - master_obj is initialized to the least object in hierarchy structure ( i.e file)
+            - if current_obj's (file) index in object_list > master_obj
+                then master_obj is replaced with current_obj
+        :param expression: expression object, ANTLR parsed expression object
+        :param objects_list: list, List of cyber observable objects i.e ['file', 'process', 'socket']
         :return: None
         """
         if hasattr(expression, 'object_path'):
@@ -168,7 +177,6 @@ class RelevanceQueryStringPatternTranslator:
         :param qualifier: str, input time range i.e START t'2019-04-10T08:43:10.003Z' STOP t'2019-04-20T10:43:10.003Z'
         :param stix_obj: str, file or process stix object
         :param relevance_map_dict: dict, relevance property format string
-        :param comparator_tuple: tuple, ("greater than or equal to", "AND", "less than or equal to")
         :param time_range: int, value available from main.py in options variable
         :return: str, format_string bound with time range provided
         """
@@ -242,6 +250,14 @@ class RelevanceQueryStringPatternTranslator:
             raise e
 
     def get_field_relevance_qry(self, current_obj, master_obj):
+        """
+        A recursive function for traversing and forming relevance query of current comparison expression
+        with reference to master object of observation expression.
+        The mapping references are available in relevance_property_format_string.json
+        :param current_obj: object of current comparison expression
+        :param master_obj: master object of observation expression as returned by get_master_obj_of_obs_exp method
+        :return: list, A list of relevance query keywords
+        """
         if current_obj != master_obj:
             parent_obj_references_dict = self._relevance_property_format_string_dict.get('object_hierarchy').\
                 get(master_obj).get('reference')
@@ -258,14 +274,12 @@ class RelevanceQueryStringPatternTranslator:
         """
         Mapping the stix object property with their corresponding property in relevance query
         from_stix_map.json will be used for mapping
-        :param expression: expression object, ANTLR parsed exrepssion object
         :param value: str
         :param comparator: str
         :param mapped_fields_array: list, Mapping available in from_stix_map.json
         :param relevance_map_dict: dict, relevance_property_format_string_map.json
         :return: str, whose part of the relevance query for each value
         """
-
         operator_mapping = {"default": "format_string_generic", "matches": "format_string_match"}
         comparison_string = ""
         if isinstance(value, list):
@@ -328,12 +342,12 @@ class RelevanceQueryStringPatternTranslator:
     def _parse_expression(self, expression, qualifier=None):
         """
         Complete formation of relevance query from ANTLR expression object
-        :param expression: expression object, ANTLR parsed exrepssion object
+        :param expression: expression object, ANTLR parsed expression object
         :param qualifier: str, default in None
         :return: None or relevance query as the method call is recursive
         """
         if isinstance(expression, ComparisonExpression):  # Base Case
-            return self.eval_comparison_exp(expression)
+            return self.__eval_comparison_exp(expression)
         elif isinstance(expression, CombinedComparisonExpression):
             operator = self.comparator_lookup[expression.operator]
             expression_01 = self._parse_expression(expression.expr1)
@@ -347,7 +361,7 @@ class RelevanceQueryStringPatternTranslator:
                 relevance_qry = "{} {} {}".format(expression_01, operator, expression_02)
             return relevance_qry
         elif isinstance(expression, ObservationExpression):
-            self.eval_observation_exp(expression, qualifier)
+            self.__eval_observation_exp(expression, qualifier)
             return None
         elif isinstance(expression, CombinedObservationExpression):
             self._parse_expression(expression.expr1, qualifier)
@@ -362,7 +376,12 @@ class RelevanceQueryStringPatternTranslator:
             raise RuntimeError("Unknown Recursion Case for expression={}, type(expression)={}".format(
                 expression, type(expression)))
 
-    def eval_comparison_exp(self, expression):
+    def __eval_comparison_exp(self, expression):
+        """
+        Function for parsing comparsion expression and returning the relevance query
+        :param expression: expression object, ANTLR parsed expression object
+        :return: str, relevance query string for the comparison expression
+        """
         self._relevance_string_list = []
         stix_object, stix_field = expression.object_path.split(':')
         mapped_fields_array = self.dmm.map_field(stix_object, stix_field)
@@ -391,7 +410,13 @@ class RelevanceQueryStringPatternTranslator:
             comparison_string = self.clean_format_string(comparison_string)
         return "{}".format(comparison_string)
 
-    def eval_observation_exp(self, expression, qualifier):
+    def __eval_observation_exp(self, expression, qualifier):
+        """
+        Function for parsing observation expression and form the complete relevance query
+        :param expression: expression object, ANTLR parsed expression object
+        :param qualifier: str, default in None
+        :return: None
+        """
         relevance_qry_termination_string = {
             "file":
                 {
@@ -416,8 +441,8 @@ class RelevanceQueryStringPatternTranslator:
         self.get_master_obj_of_obs_exp(expression.comparison_expression, objects_list)
         relevance_query = self._parse_expression(expression.comparison_expression)
         self.qualifier_string = self._parse_time_range(qualifier, self._master_obj,
-                                                       self._relevance_property_format_string_dict
-                                                       , self._time_range, self._time_range_comparator_list)
+                                                       self._relevance_property_format_string_dict,
+                                                       self._time_range, self._time_range_comparator_list)
         self.qualifier_string = self.clean_format_string(self.qualifier_string)
         if self.qualifier_string:
             # Apply the time range to entire observation expression
@@ -434,7 +459,7 @@ class RelevanceQueryStringPatternTranslator:
             closing_relevance_string = closing_relevance_string.format(SEARCH_FOLDER, self.search_folder)
         elif self._master_obj == SOCKET:
             closing_relevance_string = closing_relevance_string.format(NETWORK)
-        final_comparison_exp = self.clean_format_string(STIX_OBJECT_FORMAT_STRING_LOOKUP_DICT.
+        final_comparison_exp = self.clean_format_string(self._stix_object_format_string_lookup_dict.
                                                         get(self._master_obj)).format(relevance_query)
         final_comparison_exp += closing_relevance_string
         self.qualified_queries.append(final_comparison_exp)
@@ -442,7 +467,7 @@ class RelevanceQueryStringPatternTranslator:
     def parse_expression(self, pattern: Pattern):
         """
         parse_expression --> Native query
-        :param pattern: expression object, ANTLR parsed exrepssion object
+        :param pattern: expression object, ANTLR parsed expression object
         :return:str, relevance query(native query)
         """
         return self._parse_expression(pattern)
@@ -451,7 +476,7 @@ class RelevanceQueryStringPatternTranslator:
 def translate_pattern(pattern: Pattern, data_model_mapper, options):
     """
     Conversion of expression object to XML query
-    :param pattern: expression object, ANTLR parsed exrepssion object
+    :param pattern: expression object, ANTLR parsed expression object
     :param data_model_mapper: DataMapper object, mapping object obtained by parsing from_stix_map.json
     :param options: dict, contains 2 keys result_limit defaults to 10000, timerange defaults to 5
     :return: str, XML query with relevance query embedded inside <QueryText> tag
