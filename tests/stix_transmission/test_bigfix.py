@@ -1,7 +1,6 @@
 from stix_shifter.stix_transmission.src.modules.bigfix import bigfix_connector
 from unittest.mock import patch
 import unittest
-import json
 from stix_shifter.stix_transmission import stix_transmission
 
 class BigFixMockJsonResponse:
@@ -33,7 +32,7 @@ class BigFixMockHttpXMLResponse:
 
 config = {
             "auth": {
-                "username": "fake",
+                "user_name": "fake",
                 "password": "fake"
             }
 }
@@ -41,7 +40,7 @@ config = {
 connection = {
             "host": "fake",
             "port": "fake",
-            "cert_verify": "fake"
+            "cert": "fake"
 }
 
 
@@ -204,7 +203,7 @@ class TestBigfixConnection(unittest.TestCase):
 
         assert status_response is not None
         assert 'success' in status_response
-        assert status_response['success'] == False
+        assert status_response['success'] == True
         assert 'status' in status_response
         assert status_response['status'] == "COMPLETED"
         assert 'progress' in status_response
@@ -414,7 +413,7 @@ class TestBigfixConnection(unittest.TestCase):
         assert status_response['success'] == True
 
     @patch('stix_shifter.stix_transmission.src.modules.bigfix.bigfix_api_client.APIClient.get_search_results')
-    def test_get_search_results_file(self, mock_results_response, mock_api_client):
+    def test_results_response(self, mock_results_response, mock_api_client):
 
         mock_api_client.return_value = None
         mocked_return_value = """{
@@ -447,53 +446,12 @@ class TestBigfixConnection(unittest.TestCase):
         length = "100"
         transmission = stix_transmission.StixTransmission('bigfix',  connection, config)
         results_response = transmission.results(search_id, offset, length)
-        json_response = json.loads(results_response)
 
         assert results_response is not None
-        assert 'success' in json_response
-        assert json_response['success'] == True
-        assert 'data' in json_response
-        assert len(json_response['data']) == 1
-
-    @patch('stix_shifter.stix_transmission.src.modules.bigfix.bigfix_api_client.APIClient.get_search_results')
-    def test_get_search_results_process(self, mock_results_response, mock_api_client):
-        mock_api_client.return_value = None
-        mocked_return_value = """{
-                                    "reportingAgents": 2,
-                                    "totalResults": 2,
-                                    "results": [
-                                        {
-                                        "computerID": 12369754,
-                                        "computerName": "bigdata4545.canlab.ibm.com",
-                                        "subQueryID": 1,
-                                        "isFailure": false,
-                                        "result": "process, nscd, 577, sha256, fef562a6aedba0191dfec9b2b8cea3db36ad58f986ddeacb6dd1db4374fcb4b8, sha1, 1a51ced8c1a58725b86fcfacacbb85c076da6eca, md5, cc9989e1783dab1ca41f3c1b9398fc0b, /usr/sbin/nscd, 1559997056",
-                                        "ResponseTime": 0
-                                        },
-                                        {
-                                        "computerID": 14821900,
-                                        "computerName": "DESKTOP-C30V1JF",
-                                        "subQueryID": 1,
-                                        "isFailure": true,
-                                        "result": "Singular expression refers to nonexistent object.",
-                                        "ResponseTime": 1000
-                                        }
-                                    ]
-                                }"""
-        mock_results_response.return_value = BigFixMockJsonResponse(200, mocked_return_value)
-
-        search_id = "102"
-        offset = "0"
-        length = "100"
-        transmission = stix_transmission.StixTransmission('bigfix', connection, config)
-        results_response = transmission.results(search_id, offset, length)
-        json_response = json.loads(results_response)
-
-        assert results_response is not None
-        assert 'success' in json_response
-        assert json_response['success'] == True
-        assert 'data' in json_response
-        assert len(json_response['data']) == 1
+        assert 'success' in results_response
+        assert results_response['success'] == True
+        assert 'data' in results_response
+        assert len(results_response['data']) == 1
 
     @patch('stix_shifter.stix_transmission.src.modules.bigfix.bigfix_api_client.APIClient.get_search_results')
     def test_results_response_exeception(self, mock_results_response, mock_api_client):
@@ -543,12 +501,11 @@ class TestBigfixConnection(unittest.TestCase):
         length = "100"
         transmission = stix_transmission.StixTransmission('bigfix',  connection, config)
         results_response = transmission.results(search_id, offset, length)
-        json_response = json.loads(results_response)
 
         assert results_response is not None
-        assert 'success' in json_response
-        assert json_response['success'] == False
-        assert 'error' in json_response
+        assert 'success' in results_response
+        assert results_response['success'] == False
+        assert 'error' in results_response
 
     @patch('stix_shifter.stix_transmission.src.modules.bigfix.bigfix_api_client.APIClient.get_search_results')
     def test_results_response_bad_json(self, mock_results_response, mock_api_client):
@@ -582,58 +539,7 @@ class TestBigfixConnection(unittest.TestCase):
         transmission = stix_transmission.StixTransmission('bigfix',  connection, config)
         results_response = transmission.results(search_id, offset, length)
 
-        json_response = json.loads(results_response)
-
-        assert results_response is not None
-        assert 'success' in json_response
-        assert json_response['success'] == False
-        assert 'error' in json_response
-
-
-class TestBigfixApiClient(unittest.TestCase):
-
-    def test_bigfix_api_client_ping(self):
-
-        transmission = stix_transmission.StixTransmission('bigfix', connection, config)
-        ping_response = transmission.ping()
-
-        assert ping_response is not None
-        assert 'success' in ping_response
-        assert ping_response['success'] == False
-
-
-    def test_bigfix_api_client_query_connector(self):
-
-        transmission = stix_transmission.StixTransmission('bigfix', connection, config)
-        query = '<BESAPI xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="BESAPI.xsd"><ClientQuery><ApplicabilityRelevance>true</ApplicabilityRelevance><QueryText>( "process", name of it | "n/a",  process id of it as string | "n/a", "sha256", sha256 of image file of it | "n/a",  "sha1", sha1 of image file of it | "n/a", "md5", md5 of image file of it | "n/a",  pathname of image file of it | "n/a",  (start time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of processes whose ((name of it as lowercase = "systemd" as lowercase) AND start time of it is greater than or equal to "01 Jan 2013 08:43:10 +0000" as time AND start time of it is less than or equal to "25 Jul 2019 10:43:10 +0000" as time)</QueryText><Target><CustomRelevance>true</CustomRelevance></Target></ClientQuery></BESAPI>'
-        ping_response = transmission.query(query)
-
-        assert ping_response is not None
-        assert 'success' in ping_response
-        assert ping_response['success'] == False
-
-    def test_bigfix_api_client_results_connector(self):
-
-        transmission = stix_transmission.StixTransmission('bigfix', connection, config)
-        status_response = transmission.status("2000")
-
-        assert status_response is not None
-        assert 'success' in status_response
-        assert status_response['success'] == False
-        assert 'error' in status_response
-
-    def test_get_search_results_file(self):
-
-        search_id = "102"
-        offset = "0"
-        length = "100"
-        transmission = stix_transmission.StixTransmission('bigfix', connection, config)
-        results_response = transmission.results(search_id, offset, length)
-        # json_response = json.dumps(results_response)
-
         assert results_response is not None
         assert 'success' in results_response
         assert results_response['success'] == False
         assert 'error' in results_response
-
-
