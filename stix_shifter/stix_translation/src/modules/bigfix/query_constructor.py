@@ -188,10 +188,14 @@ class RelevanceQueryStringPatternTranslator:
         :param comparator: str
         :return: tuple
         """
+        _transformer_hierarchy = ['', 'as lowercase', 'as string']
         if isinstance(value, list):
             value = [each.replace('"', '') if each.replace('"', '').isdigit() else each for each in list(value)]
-            transformer = 'as lowercase' if value[0].replace('"', '').isalpha() else '' if \
-                value[0].replace('"', '').isdigit() else 'as string'
+            transformer = _transformer_hierarchy[max([_transformer_hierarchy.index('as lowercase')
+                                                      if each.replace('"', '').isalpha() else
+                                                      _transformer_hierarchy.index('') if
+                                                      each.replace('"', '').isdigit() else
+                                                      _transformer_hierarchy.index('as string') for each in value])]
         else:
             value = value.replace('"', '') if value.replace('"', '').isdigit() else value
             transformer = 'as lowercase' if value.replace('"', '').isalpha() else '' if \
@@ -240,7 +244,7 @@ class RelevanceQueryStringPatternTranslator:
                 else:
                     interim_qry_str = self._query_const_from_list_subroutine(comparison_string_list)
                     comparison_string = condition_based_map_dict.get(conditional_attr).format(
-                        *interim_qry_str.split('OR'))
+                        *interim_qry_str.strip('()').split(' OR '))
             else:
                 if isinstance(value, list):
                     for each_in_value_list in zip(*comparison_string_list):
@@ -423,9 +427,6 @@ class RelevanceQueryStringPatternTranslator:
         :param relevance_map_dict: dict, relevance_property_format_string_map.json
         :return: str, whose part of the relevance query for each value
         """
-        # relevance_string_list, relevance_map_dict, conditional_attr = args
-        # comparison_string = ""
-        # comparison_string_list = [] if isinstance(value, str) else [[] for _ in value]
         comparison_string_list = []
         for mapped_field in mapped_fields_array:
             mapped_field = mapped_field.split('.')[-1]
