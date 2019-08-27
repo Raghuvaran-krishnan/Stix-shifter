@@ -14,7 +14,7 @@ class UnexpectedResponseException(Exception):
 
 class BigFixStatusConnector(BaseStatusConnector):
 
-    RELEVANCE = 'number of bes computers whose (last report time of it > (now - 15 * minute))'
+    RELEVANCE = 'number of bes computers whose (last report time of it > (now - 60 * minute))'
     PATTERN = '<Answer type="integer">(.*)</Answer>'
     DEFAULT_CLIENT_COUNT = sys.maxsize
 

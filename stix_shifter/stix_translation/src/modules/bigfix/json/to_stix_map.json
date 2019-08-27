@@ -31,6 +31,10 @@
         "key": "file.hashes.MD5",
         "object": "file"
     },
+    "file_size": {
+        "key" : "file.size",
+        "object": "file"
+    },
     "process_name": {
         "key": "process.name",
         "object": "process"
@@ -39,6 +43,29 @@
         "key": "process.pid",
         "object": "process"
     },
+   "process_ppid": [
+    {
+      "key": "process.pid",
+      "object": "parent_process",
+      "transformer": "ToInteger"
+    },
+    {
+      "key": "process.parent_ref",
+      "object": "process",
+      "references": "parent_process"
+    }
+    ],
+    "process_user": [
+      {
+        "key":"user-account.user_id",
+        "object": "user"
+      },
+      {
+        "key": "process.creator_user_ref",
+        "object": "process",
+        "references": "user"
+      }
+    ],
     "start_time": [
         {
             "key": "created",

@@ -54,7 +54,72 @@ class BigFixResultsConnector(BaseResultsConnector):
         return return_obj
 
     @staticmethod
-    def format_computer_obj(computer_obj):
+    def _format_socket_obj(obj_list, formatted_obj):
+        """
+        Function for formatting file object from API result
+        :param obj_list: list, object attribute value list
+        :param formatted_obj: dict
+        :return: dict
+        """
+        attr_with_na_value_index_dict = {'local address': (1, 'n/a'), 'remote_address': (3, 'n/a'),
+                                         'local port': (5, '-1'), 'remote port': (7, '-1'),
+                                         'sha256hash': (12, 'n/a'), 'sha1hash': (14, 'n/a'),
+                                         'md5hash': (16, 'n/a'), 'file_path': (17, 'n/a'),
+                                         'process_ppid': (18, 'n/a'), 'process_user': (19, 'n/a')
+                                         }
+        for key, value in attr_with_na_value_index_dict.items():
+            if obj_list[value[0]].strip() != value[1]:
+                formatted_obj[key] = obj_list[value[0]].strip()
+        formatted_obj['process_name'] = obj_list[9].strip()
+        formatted_obj['process_id'] = obj_list[10].strip()
+        formatted_obj['file_size'] = obj_list[20].strip()
+        formatted_obj['start_time'] = obj_list[21].strip(')').strip()
+        formatted_obj['protocol'] = 'tcp' if obj_list[22].strip() == 'True' else 'udp'
+        return formatted_obj
+
+    @staticmethod
+    def _format_process_obj(obj_list, formatted_obj):
+        """
+        Function for formatting process object from API result
+        :param obj_list: list, object attribute value list
+        :param formatted_obj: dict
+        :return: dict
+        """
+        attr_with_na_value_index_dict = {'sha256hash': (4, 'n/a'), 'sha1hash': (6, 'n/a'),
+                                         'md5hash': (8, 'n/a'), 'file_path': (9, 'n/a'),
+                                         'process_ppid': (10, 'n/a'), 'process_user': (11, 'n/a')
+                                         }
+        for key, value in attr_with_na_value_index_dict.items():
+            if obj_list[value[0]].strip() != value[1]:
+                formatted_obj[key] = obj_list[value[0]].strip()
+        formatted_obj['start_time'] = obj_list[13].strip()
+        formatted_obj['type'] = obj_list[0].strip()
+        formatted_obj['process_name'] = obj_list[1].strip()
+        formatted_obj['process_id'] = obj_list[2].strip()
+        formatted_obj['file_size'] = obj_list[12].strip()
+        return formatted_obj
+
+    @staticmethod
+    def _format_file_obj(obj_list, formatted_obj):
+        """
+        Function for formatting file object from API result
+        :param obj_list: list, object attribute value list
+        :param formatted_obj: dict
+        :return: dict
+        """
+        attr_with_na_value_index_dict = {'sha256hash': (3, 'n/a'), 'sha1hash': (5, 'n/a'),
+                                         'md5hash': (7, 'n/a'), 'file_path': (8, 'n/a')
+                                         }
+        for key, value in attr_with_na_value_index_dict.items():
+            if obj_list[value[0]].strip() != value[1]:
+                formatted_obj[key] = obj_list[value[0]].strip()
+        formatted_obj['type'] = obj_list[0].strip()
+        formatted_obj['file_name'] = obj_list[1].strip()
+        formatted_obj['file_size'] = obj_list[9].strip()
+        formatted_obj['modified_time'] = obj_list[10].strip()
+        return formatted_obj
+
+    def format_computer_obj(self, computer_obj):
         # {"computerID": 12369754, "computerName": "bigdata4545.canlab.ibm.com", "subQueryID": 1,
         # "isFailure": false, "result": "file, .X0-lock,
         # sha256, 7236f966f07259a1de3ee0d48a3ef0ee47c4a551af7f0d76dcabbbb9d6e00940,
@@ -67,41 +132,11 @@ class BigFixResultsConnector(BaseResultsConnector):
         formatted_obj['computer_identity'] = computer_identity
         formatted_obj['subQueryID'] = computer_obj['subQueryID']
         if result.startswith('process'):
-            formatted_obj['start_time'] = obj_list[10].strip()
-            formatted_obj['type'] = obj_list[0].strip()
-            formatted_obj['process_name'] = obj_list[1].strip()
-            formatted_obj['process_id'] = obj_list[2].strip()
-            formatted_obj['sha256hash'] = obj_list[4].strip()
-            formatted_obj['sha1hash'] = obj_list[6].strip()
-            formatted_obj['md5hash'] = obj_list[8].strip()
-            formatted_obj['file_path'] = obj_list[9].strip()
+            formatted_obj = self._format_process_obj(obj_list, formatted_obj)
         elif result.startswith('file'):
-            formatted_obj['type'] = obj_list[0].strip()
-            formatted_obj['file_name'] = obj_list[1].strip()
-            formatted_obj['sha256hash'] = obj_list[3].strip()
-            formatted_obj['sha1hash'] = obj_list[5].strip()
-            formatted_obj['md5hash'] = obj_list[7].strip()
-            formatted_obj['file_path'] = obj_list[8].strip()
-            formatted_obj['modified_time'] = obj_list[9].strip()
+            formatted_obj = self._format_file_obj(obj_list, formatted_obj)
         elif result.lower().startswith('local'):
-            if obj_list[1].strip() != 'n/a':
-                formatted_obj['local_address'] = obj_list[1].strip()
-            if obj_list[3].strip() != 'n/a':
-                formatted_obj['remote_address'] = obj_list[3].strip()
-            formatted_obj['local_port'] = obj_list[5].strip()
-            formatted_obj['remote_port'] = obj_list[7].strip()
-            formatted_obj['process_name'] = obj_list[9].strip()
-            formatted_obj['process_id'] = obj_list[10].strip()
-            if obj_list[12].strip() != 'n/a':
-                formatted_obj['sha256hash'] = obj_list[12].strip()
-            if obj_list[14].strip() != 'n/a':
-                formatted_obj['sha1hash'] = obj_list[14].strip()
-            if obj_list[16].strip() != 'n/a':
-                formatted_obj['md5hash'] = obj_list[16].strip()
-            if obj_list[17].strip() != 'n/a':
-                formatted_obj['file_path'] = obj_list[17].strip()
-            formatted_obj['start_time'] = obj_list[19].strip(')').strip()
-            formatted_obj['protocol'] = 'tcp' if obj_list[21].strip() == 'True' else 'udp'
+            formatted_obj = self._format_socket_obj(obj_list, formatted_obj)
         else:
             print('Unknown result')
         return formatted_obj
