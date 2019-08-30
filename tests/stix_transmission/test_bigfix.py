@@ -413,7 +413,7 @@ class TestBigfixConnection(unittest.TestCase):
         assert status_response['success'] == True
 
     @patch('stix_shifter.stix_transmission.src.modules.bigfix.bigfix_api_client.APIClient.get_search_results')
-    def test_results_response(self, mock_results_response, mock_api_client):
+    def test_results_response_file(self, mock_results_response, mock_api_client):
 
         mock_api_client.return_value = None
         mocked_return_value = """{
@@ -425,7 +425,10 @@ class TestBigfixConnection(unittest.TestCase):
                                         "computerName": "bigdata4545.canlab.ibm.com",
                                         "subQueryID": 1,
                                         "isFailure": false,
-                                        "result": "file, .X0-lock, sha256, 7236f966f07259a1de3ee0d48a3ef0ee47c4a551af7f0d76dcabbbb9d6e00940, sha1, 8b5e953be1db90172af66631132f6f27dda402d2, md5, e5307d27f0eb9a27af8597a1ddc51e89, /tmp/.X0-lock, 1541424894",
+                                        "result": "file, .X0-lock, sha256, \
+                                        7236f966f07259a1de3ee0d48a3ef0ee47c4a551af7f0d76dcabbbb9d6e00940, sha1, \
+                                        8b5e953be1db90172af66631132f6f27dda402d2, md5, \
+                                        e5307d27f0eb9a27af8597a1ddc51e89, /tmp/.X0-lock, 1661,1541424894",
                                         "ResponseTime": 0
                                         },
                                         {
@@ -445,6 +448,84 @@ class TestBigfixConnection(unittest.TestCase):
         offset = "0"
         length = "100"
         transmission = stix_transmission.StixTransmission('bigfix',  connection, config)
+        results_response = transmission.results(search_id, offset, length)
+
+        assert results_response is not None
+        assert 'success' in results_response
+        assert results_response['success'] == True
+        assert 'data' in results_response
+        assert len(results_response['data']) == 1
+
+    @patch('stix_shifter.stix_transmission.src.modules.bigfix.bigfix_api_client.APIClient.get_search_results')
+    def test_results_response_process(self, mock_results_response, mock_api_client):
+        mock_api_client.return_value = None
+        mocked_return_value = """{
+                                    "reportingAgents": 2,
+                                    "totalResults": 2,
+                                    "results": [
+                                        {
+                                        "computerID": 1619109363,
+                                        "computerName": "hclhero.hcl.local",
+                                        "subQueryID": 1,
+                                        "isFailure": false,
+                                        "result": "process, systemd, 1, sha256, 5ecacfffd2f9448c931361a03db937a4ab7454fb800d9d8b41253c931434fe2b, sha1, b6d15bc70b6467d1d5652a589ecdb3acea1796f0, md5, 995efcd809f3aa50416916a734277a1f, /usr/lib/systemd/systemd, 0, root, 1612152, 1566869191",
+                                        "ResponseTime": 0
+                                        },
+                                        {
+                                        "computerID": 14821900,
+                                        "computerName": "DESKTOP-C30V1JF",
+                                        "subQueryID": 1,
+                                        "isFailure": true,
+                                        "result": "Singular expression refers to nonexistent object.",
+                                        "ResponseTime": 1000
+                                        }
+                                    ]
+                                }"""
+        mock_results_response.return_value = BigFixMockJsonResponse(200, mocked_return_value)
+
+        search_id = "103"
+        offset = "0"
+        length = "100"
+        transmission = stix_transmission.StixTransmission('bigfix', connection, config)
+        results_response = transmission.results(search_id, offset, length)
+
+        assert results_response is not None
+        assert 'success' in results_response
+        assert results_response['success'] == True
+        assert 'data' in results_response
+        assert len(results_response['data']) == 1
+
+    @patch('stix_shifter.stix_transmission.src.modules.bigfix.bigfix_api_client.APIClient.get_search_results')
+    def test_results_response_network(self, mock_results_response, mock_api_client):
+        mock_api_client.return_value = None
+        mocked_return_value = """{
+                                    "reportingAgents": 2,
+                                    "totalResults": 2,
+                                    "results": [
+                                        {
+                                        "computerID": 550872812,
+                                        "computerName": "WIN-N11M78AV7BP",
+                                        "subQueryID": 1,
+                                        "isFailure": false,
+                                        "result": "Local Address, 192.168.36.10, Remote Address, n/a, Local port, 139, remote port, -1, Process name, System, 4, sha256, n/a, sha1, n/a, md5, n/a, n/a, ( Creation time, 1565875693 ), TCP, True, UDP, False",
+                                        "ResponseTime": 0
+                                        },
+                                        {
+                                        "computerID": 14821900,
+                                        "computerName": "DESKTOP-C30V1JF",
+                                        "subQueryID": 1,
+                                        "isFailure": true,
+                                        "result": "Singular expression refers to nonexistent object.",
+                                        "ResponseTime": 1000
+                                        }
+                                    ]
+                                }"""
+        mock_results_response.return_value = BigFixMockJsonResponse(200, mocked_return_value)
+
+        search_id = "104"
+        offset = "0"
+        length = "100"
+        transmission = stix_transmission.StixTransmission('bigfix', connection, config)
         results_response = transmission.results(search_id, offset, length)
 
         assert results_response is not None
