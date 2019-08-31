@@ -149,5 +149,21 @@
         "key": "network-traffic.protocols",
         "object": "nt",
         "transformer": "ToLowercaseArray"
-    }
+    },
+   "mac": [
+      {
+        "key": "mac-addr.value",
+        "object": "src_mac"
+      },
+      {
+        "key": "ipv4-addr.resolves_to_refs",
+        "object": "src_ip",
+        "references": "src_mac"
+      },
+      {
+        "key": "ipv6-addr.resolves_to_refs",
+        "object": "src_ip",
+        "references": "src_mac"
+      }
+    ]
 }

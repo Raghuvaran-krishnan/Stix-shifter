@@ -61,16 +61,16 @@ class BigFixResultsConnector(BaseResultsConnector):
         :param formatted_obj: dict
         :return: dict
         """
-        attr_with_na_value_index_dict = {'local address': (1, 'n/a'), 'remote_address': (3, 'n/a'),
-                                         'local port': (5, '-1'), 'remote port': (7, '-1'),
-                                         'sha256hash': (12, 'n/a'), 'sha1hash': (14, 'n/a'),
-                                         'md5hash': (16, 'n/a'), 'file_path': (17, 'n/a'),
-                                         'process_ppid': (18, 'n/a'), 'process_user': (19, 'n/a'),
-                                         'start_time': (21, '0'), 'process_name': (9, 'n/a'),
-                                         'process_id': (10, 'n/a'), 'file_size': (20, '0')
+        attr_with_na_value_index_dict = {'local_address': (1, ('n/a',)), 'remote_address': (3, ('n/a',)),
+                                         'local_port': (5, ('-1',)), 'remote_port': (7, ('-1',)),
+                                         'sha256hash': (12, ('n/a',)), 'sha1hash': (14, ('n/a',)),
+                                         'md5hash': (16, ('n/a',)), 'file_path': (17, ('n/a',)),
+                                         'process_ppid': (18, ('n/a',)), 'process_user': (19, ('n/a',)),
+                                         'start_time': (21, ('0',)), 'process_name': (9, ('n/a',)),
+                                         'process_id': (10, ('n/a', '0')), 'file_size': (20, ('0',))
                                          }
         for key, value in attr_with_na_value_index_dict.items():
-            if obj_list[value[0]].strip() != value[1]:
+            if obj_list[value[0]].strip() not in value[1]:
                 formatted_obj[key] = obj_list[value[0]].strip()
         formatted_obj['type'] = "Socket"
         formatted_obj['protocol'] = 'tcp' if obj_list[22].strip() == 'True' else 'udp'
@@ -84,14 +84,14 @@ class BigFixResultsConnector(BaseResultsConnector):
         :param formatted_obj: dict
         :return: dict
         """
-        attr_with_na_value_index_dict = {'sha256hash': (4, 'n/a'), 'sha1hash': (6, 'n/a'),
-                                         'md5hash': (8, 'n/a'), 'file_path': (9, 'n/a'),
-                                         'process_ppid': (10, 'n/a'), 'process_user': (11, 'n/a'),
-                                         'start_time': (13, '0'), 'process_name': (1, 'n/a'),
-                                         'process_id': (2, 'n/a'), 'file_size': (12, '0')
+        attr_with_na_value_index_dict = {'sha256hash': (4, ('n/a',)), 'sha1hash': (6, ('n/a',)),
+                                         'md5hash': (8, ('n/a',)), 'file_path': (9, ('n/a',)),
+                                         'process_ppid': (10, ('n/a',)), 'process_user': (11, ('n/a',)),
+                                         'start_time': (13, ('0',)), 'process_name': (1, ('n/a',)),
+                                         'process_id': (2, ('n/a', '0')), 'file_size': (12, ('0',))
                                          }
         for key, value in attr_with_na_value_index_dict.items():
-            if obj_list[value[0]].strip() != value[1]:
+            if obj_list[value[0]].strip() not in value[1]:
                 formatted_obj[key] = obj_list[value[0]].strip()
         formatted_obj['type'] = obj_list[0].strip()
         return formatted_obj
@@ -104,15 +104,31 @@ class BigFixResultsConnector(BaseResultsConnector):
         :param formatted_obj: dict
         :return: dict
         """
-        attr_with_na_value_index_dict = {'sha256hash': (3, 'n/a'), 'sha1hash': (5, 'n/a'),
-                                         'md5hash': (7, 'n/a'), 'file_path': (8, 'n/a'),
-                                         'file_name': (1, 'n/a'), 'file_size': (9, '0')
+        attr_with_na_value_index_dict = {'sha256hash': (3, ('n/a',)), 'sha1hash': (5, ('n/a',)),
+                                         'md5hash': (7, ('n/a',)), 'file_path': (8, ('n/a',)),
+                                         'file_name': (1, ('n/a',)), 'file_size': (9, ('0',))
                                          }
         for key, value in attr_with_na_value_index_dict.items():
-            if obj_list[value[0]].strip() != value[1]:
+            if obj_list[value[0]].strip() not in value[1]:
                 formatted_obj[key] = obj_list[value[0]].strip()
         formatted_obj['type'] = obj_list[0].strip()
         formatted_obj['modified_time'] = obj_list[10].strip()
+        return formatted_obj
+
+    @staticmethod
+    def _format_adapter_obj(obj_list, formatted_obj):
+        """
+        Function for formatting adapter(mac address) object from API result
+        :param obj_list: list, object attribute value list
+        :param formatted_obj: dict
+        :return: dict
+        """
+        attr_with_na_value_index_dict = {'local_address': (1, ('n/a',)), 'mac': (2, ('n/a',))
+                                         }
+        for key, value in attr_with_na_value_index_dict.items():
+            if obj_list[value[0]].strip() not in value[1]:
+                formatted_obj[key] = obj_list[value[0]].strip()
+        formatted_obj['type'] = obj_list[0].strip()
         return formatted_obj
 
     def format_computer_obj(self, computer_obj):
@@ -133,6 +149,8 @@ class BigFixResultsConnector(BaseResultsConnector):
             formatted_obj = self._format_file_obj(obj_list, formatted_obj)
         elif result.lower().startswith('local'):
             formatted_obj = self._format_socket_obj(obj_list, formatted_obj)
+        elif result.lower().startswith('address'):
+            formatted_obj = self._format_adapter_obj(obj_list, formatted_obj)
         else:
             print('Unknown result')
         return formatted_obj

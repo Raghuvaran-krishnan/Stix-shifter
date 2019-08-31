@@ -4,13 +4,18 @@ from stix_shifter.stix_translation.src.patterns.pattern_objects import Observati
 import json
 import os.path as path
 from stix_shifter.stix_translation.src.utils.transformers import TimestampToUTC
+from stix_shifter.stix_translation.src.json_to_stix import observable
 from datetime import datetime, timedelta
+from functools import reduce
+import operator as op
 import re
 
+FILE = "file"
 SEARCH_FOLDER = 'folder'
+PROCESS = 'process'
 SOCKET = "socket"
 NETWORK = "network"
-FILE = "file"
+ADAPTER = "adapter"
 DEFAULT_SEARCH_FOLDER = '(system folder; folders of system folder)'
 RELEVANCE_PROPERTY_MAP_JSON = "json/relevance_property_format_string_map.json"
 START_STOP_PATTERN = r"\d{4}(-\d{2}){2}T\d{2}(:\d{2}){2}(\.\d+)?Z"
@@ -39,14 +44,14 @@ class RelevanceQueryStringPatternTranslator:
         ObservationOperators.And: 'OR'
     }
     _stix_object_format_string_lookup_dict = {
-        'file': '''("file", name of it | "n/a",
+        FILE: '''("file", name of it | "n/a",
                     "sha256", sha256 of it | "n/a",
                     "sha1", sha1 of it | "n/a",
                     "md5", md5 of it | "n/a",
                     pathname of it | "n/a",
                     size of it | 0,
                     (modification time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of files {}''',
-        'process': '''("process", name of it | "n/a",
+        PROCESS: '''("process", name of it | "n/a",
                     pid of it as string | "n/a",
                     "sha256", sha256 of image file of it | "n/a",
                     "sha1", sha1 of image file of it | "n/a",
@@ -63,7 +68,7 @@ class RelevanceQueryStringPatternTranslator:
                     (start time of it | "01 Jan 1970 00:00:00 +0000" as time -
                     "01 Jan 1970 00:00:00 +0000" as time)/second))
                     of processes {}''',
-        'socket': '''("Local Address", local address of it as string | "n/a",
+        SOCKET: '''("Local Address", local address of it as string | "n/a",
                     "Remote Address", remote address of it as string | "n/a",
                     "Local port", local port of it | -1,
                     "remote port", remote port of it | -1,
@@ -84,7 +89,9 @@ class RelevanceQueryStringPatternTranslator:
                     (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time -
                     "01 Jan 1970 00:00:00 +0000" as time)/second),
                     "TCP", tcp of it, "UDP", udp of it)
-                    of sockets {}'''
+                    of sockets {}''',
+        ADAPTER: '''("Address", address of it as string | "n/a",
+                    mac address of it as string | "n/a") of adapters {}'''
         }
 
     def __init__(self, pattern: Pattern, data_model_mapper, time_range):
@@ -95,7 +102,9 @@ class RelevanceQueryStringPatternTranslator:
         self.qualifier_string = ''
         self.search_folder = DEFAULT_SEARCH_FOLDER
         self._master_obj = None
+        self._split_master_obj_list = []
         self._relevance_string_list = []
+        self._relevance_query_for_split_attr = []
         self._relevance_property_format_string_dict = self.load_json(RELEVANCE_PROPERTY_MAP_JSON)
         self._time_range_comparator_list = [self.comparator_lookup.get(each) for each in
                                             (ComparisonComparators.GreaterThanOrEqual,
@@ -179,6 +188,29 @@ class RelevanceQueryStringPatternTranslator:
         return value
 
     @staticmethod
+    def _check_value_type(value):
+        """
+        Function returning the type of value i.e mac, ipv4, ipv6
+        :param value: str
+        :return: list
+        """
+        value = value if isinstance(value, list) else [value]
+        value_type = []
+        non_combinable_values_attr = ['mac']
+        combinable_value_attr = ['ipv4', 'ipv6']
+        for each in value:
+            for key, pattern in observable.REGEX.items():
+                if key not in ('date', 'ipv4_cidr', 'domain_name') and bool(re.search(pattern, each)):
+                    if value_type and key not in value_type:
+                        if not reduce(op.and_, [each in combinable_value_attr for each in value_type]) or \
+                                key in non_combinable_values_attr:
+                            raise ValueError("Cannot combine {} with {} for IN operation".format(key, value_type))
+                    else:
+                        value_type.append(key)
+                        break
+        return value_type
+
+    @staticmethod
     def _map_transformer_to_field(value, comparator) -> str:
         """
         Function for mapping transformer to field based on inbound value
@@ -197,7 +229,7 @@ class RelevanceQueryStringPatternTranslator:
                                                       each.replace('"', '').isdigit() else
                                                       _transformer_hierarchy.index('as string') for each in value])]
         else:
-            value = value.replace('"', '') if value.replace('"', '').isdigit() else value
+            value = value.replace('"', '') if value.replace('"', '').isdigit() and comparator != 'contains' else value
             transformer = 'as lowercase' if value.replace('"', '').isalpha() else '' if \
                 value[0].replace('"', '').isdigit() else 'as string'
             if comparator == 'contains':
@@ -256,6 +288,13 @@ class RelevanceQueryStringPatternTranslator:
         return comparison_string
 
     def _relevance_qry_list_phrasing(self, value, comparator, mapped_field):
+        """
+        A sub method for _parse_mapped_field method in aiding query construction
+        :param value: str
+        :param comparator: str
+        :param mapped_field: str
+        :return: list
+        """
         operator_mapping = {"default": "format_string_generic", "matches": "format_string_match"}
         comparison_string_list = [] if isinstance(value, str) else [[] for _ in value]
         mapped_field = "{} of ".format(mapped_field) if self._relevance_string_list else mapped_field
@@ -297,15 +336,26 @@ class RelevanceQueryStringPatternTranslator:
         :param objects_list: list, List of cyber observable objects i.e ['file', 'process', 'socket']
         :return: None
         """
+        regex_val_marked_for_expr_split = ['mac']
+        object_marked_for_expr_split = ['mac-addr:value', 'network-traffic:src_ref.value']
         if hasattr(expression, 'object_path'):
             stix_object, stix_field = expression.object_path.split(':')
+            value = expression.value.values if hasattr(expression.value, 'values') else expression.value
+            value_type = self._check_value_type(value)
+            is_value_type_mac = reduce(op.and_, [each_value in regex_val_marked_for_expr_split
+                                                 for each_value in value_type]) if value_type else False
             mapped_field = self.dmm.map_field(stix_object, stix_field)[0]
             current_comparison_obj = mapped_field.split('.')[0]
-            try:
-                if objects_list.index(current_comparison_obj) > objects_list.index(self._master_obj):
-                    self._master_obj = current_comparison_obj
-            except ValueError:
-                raise ValueError("Unmapped object: {}. Please check from_stix json".format(current_comparison_obj))
+            if current_comparison_obj in self._relevance_property_format_string_dict.get('object_hierarchy'):
+                if is_value_type_mac and expression.object_path in object_marked_for_expr_split:
+                    self._split_master_obj_list.append(ADAPTER)
+                else:
+                    if not self._master_obj or objects_list.index(current_comparison_obj) > \
+                            objects_list.index(self._master_obj):
+                        self._master_obj = current_comparison_obj
+            else:
+                if expression.object_path in object_marked_for_expr_split:
+                    self._split_master_obj_list.append(ADAPTER)
         else:
             self.get_master_obj_of_obs_exp(expression.expr1, objects_list)
             self.get_master_obj_of_obs_exp(expression.expr2, objects_list)
@@ -315,7 +365,8 @@ class RelevanceQueryStringPatternTranslator:
         """
         Format the input time range
         i.e <START|STOP>t'2019-04-20T10:43:10.003Z to %d %b %Y %H:%M:%S %z"(i.e 23 Oct 2018 12:20:14 +0000)
-        :param qualifier: str, input time range i.e START t'2019-04-10T08:43:10.003Z' STOP t'2019-04-20T10:43:10.003Z'
+        :param qualifier: str | None, input time range i.e START t'2019-04-10T08:43:10.003Z'
+        STOP t'2019-04-20T10:43:10.003Z'
         :param stix_obj: str, file or process stix object
         :param relevance_map_dict: dict, relevance property format string
         :param time_range: int, value available from main.py in options variable
@@ -325,7 +376,7 @@ class RelevanceQueryStringPatternTranslator:
         format_string_list = []
         epoch_time_string = "01 Jan 1970 00:00:00 +0000"
         qualifier_master_dict = {
-            "file":
+            FILE:
                 {
                     "mapped_field": ["modification time"],
                     "extra_mapped_string": "",
@@ -335,7 +386,7 @@ class RelevanceQueryStringPatternTranslator:
                     "default_if_attr_undefined": '',
                     "os_dependency": 0
                 },
-            "process":
+            PROCESS:
                 {
                     "mapped_field": ["creation time", "start time"],
                     "extra_mapped_string": "",
@@ -345,7 +396,7 @@ class RelevanceQueryStringPatternTranslator:
                     "default_if_attr_undefined": '| "{}"'.format(epoch_time_string),
                     "os_dependency": 1
                 },
-            "socket":
+            SOCKET:
                 {
                     "mapped_field": ["creation time", "start time"],
                     "extra_mapped_string": " of process",
@@ -354,6 +405,10 @@ class RelevanceQueryStringPatternTranslator:
                     "add_timestamp_to_relevance": 1,
                     "default_if_attr_undefined": '| "{}"'.format(epoch_time_string),
                     "os_dependency": 1
+                },
+            ADAPTER:
+                {
+                    "add_timestamp_to_relevance": 0,
                 }}
         condition_format_for_time = """(if (windows of operating system) then {time_exp1} else {time_exp2})"""
         qualifier_keys_list = ['mapped_field', 'extra_mapped_string', 'transformer', 'default_if_attr_undefined']
@@ -405,18 +460,18 @@ class RelevanceQueryStringPatternTranslator:
         :param master_obj: master object of observation expression as returned by get_master_obj_of_obs_exp method
         :return: list, A list of relevance query keywords
         """
-        if current_obj != master_obj:
-            parent_obj_references_dict = self._relevance_property_format_string_dict.get('object_hierarchy').\
-                get(master_obj).get('reference')
-            if parent_obj_references_dict:
-                for each_key in parent_obj_references_dict:
-                    self._relevance_string_list.insert(0, parent_obj_references_dict.get(each_key))
-                    if current_obj == each_key:
-                        break
-                    else:
-                        self.get_field_relevance_qry(current_obj, each_key)
+        if current_obj in self._relevance_property_format_string_dict.get('object_hierarchy'):
+            if current_obj != master_obj:
+                parent_obj_references_dict = self._relevance_property_format_string_dict.get('object_hierarchy').\
+                    get(master_obj).get('reference')
+                if parent_obj_references_dict:
+                    for each_key in parent_obj_references_dict:
+                        self._relevance_string_list.insert(0, parent_obj_references_dict.get(each_key))
+                        if current_obj == each_key:
+                            break
+                        else:
+                            self.get_field_relevance_qry(current_obj, each_key)
 
-    # @staticmethod
     def _parse_mapped_fields(self, value, comparator, mapped_fields_array, conditional_attr):
         """
         Mapping the stix object property with their corresponding property in relevance query
@@ -424,7 +479,8 @@ class RelevanceQueryStringPatternTranslator:
         :param value: str
         :param comparator: str
         :param mapped_fields_array: list, Mapping available in from_stix_map.json
-        :param relevance_map_dict: dict, relevance_property_format_string_map.json
+        :param conditional_attr: str, A flag for conditional relevance qry formation
+        eg. user attribute of process is OS specific
         :return: str, whose part of the relevance query for each value
         """
         comparison_string_list = []
@@ -444,11 +500,54 @@ class RelevanceQueryStringPatternTranslator:
         """
         return re.sub(r'\r|\n|\s{2,}|\t', ' ', format_string)
 
+    def _is_exp_split_needed(self, expression):
+        """
+        Function to parse comparison expression and return True if query needs to split into individual API queries
+        i.e. In the event of mac address and ipv4 value given within same observation expression
+        Both the attributes have to be split into 2 API queries(No common parent object)
+        :param expression: expression object, ANTLR parsed expression object
+        :return: tuple
+        """
+        attr_for_non_expr_modification = 'mac-addr:value'
+        attr_marked_for_expr_split = [attr_for_non_expr_modification, 'network-traffic:src_ref.value']
+        object_marked_for_expr_split = ['mac']
+        other_objects_for_non_split_like_mac = ['ipv4', 'ipv6']
+        is_split_expr = False
+        is_expr_modified = False
+        if hasattr(expression, 'object_path'):
+            value = expression.value.values if hasattr(expression.value, 'values') else expression.value
+            value_type = self._check_value_type(value)
+            stix_obj_attr = expression.object_path
+            is_value_type_mac = reduce(op.and_, [each_value in object_marked_for_expr_split
+                                                 for each_value in value_type]) if value_type else False
+            is_value_type_ipv4_ipv6 = reduce(op.and_, [each_value in other_objects_for_non_split_like_mac
+                                                       for each_value in value_type]) if value_type else False
+            if stix_obj_attr in attr_marked_for_expr_split:
+                if value_type:
+                    if is_value_type_mac:
+                        is_split_expr = True
+                        if stix_obj_attr != attr_for_non_expr_modification:
+                            is_expr_modified = True
+                            expression.object_path = attr_for_non_expr_modification
+                    # Below elif for network-traffic:src-ref with ipv4 and ipv6 values
+                    elif is_value_type_ipv4_ipv6:
+                        if stix_obj_attr == attr_for_non_expr_modification:
+                            raise ValueError("Irrelevant value:{} for attribute {}. Please check from_stix pattern".
+                                             format(value, stix_obj_attr))
+                # Below elif for STIX pattern with mac address, network-traffic:src_ref LIKE, matches operation
+                else:
+                    if stix_obj_attr == attr_for_non_expr_modification:
+                        is_split_expr = True
+        else:
+            self._is_exp_split_needed(expression.expr1)
+            self._is_exp_split_needed(expression.expr2)
+        return is_split_expr, is_expr_modified
+
     def _parse_expression(self, expression, qualifier=None):
         """
         Complete formation of relevance query from ANTLR expression object
         :param expression: expression object, ANTLR parsed expression object
-        :param qualifier: str, default in None
+        :param qualifier: str | None
         :return: None or relevance query as the method call is recursive
         """
         if isinstance(expression, ComparisonExpression):  # Base Case
@@ -515,38 +614,47 @@ class RelevanceQueryStringPatternTranslator:
             self.search_folder = value
         else:
             comparison_string = self.clean_format_string(comparison_string)
+        # Assigning the relevance condition of mac address to an instance variable and returning ''
+        # so as to convert into individual API relevance query
+        _is_expr_split_needed, is_expr_modified = self._is_exp_split_needed(expression)
+        if _is_expr_split_needed:
+            if is_expr_modified:
+                comparison_string = self.__eval_comparison_exp(expression)
+            self._relevance_query_for_split_attr.append(comparison_string)
+            comparison_string = ''
         return "{}".format(comparison_string)
 
-    def __eval_observation_exp(self, expression, qualifier):
+    def __eval_obs_exp_subroutine(self, relevance_query, qualifier):
         """
-        Function for parsing observation expression and form the complete relevance query
-        :param expression: expression object, ANTLR parsed expression object
-        :param qualifier: str, default in None
-        :return: None
+        A sub method call for __eval_obs_exp to aid in final relevance query formation
+        :param relevance_query: str
+        :param qualifier: str | None
+        :return: str
         """
         relevance_qry_termination_string = {
-            "file":
+            FILE:
                 {
                     "add_qry_closing_string": 1,
                     "format_string": " of {} {}"
                 },
-            "socket":
+            PROCESS:
+                {
+                    "add_qry_closing_string": 1,
+                    "format_string": ""
+                },
+            SOCKET:
                 {
                     "add_qry_closing_string": 1,
                     "format_string": " of {}"
                 },
-            "process":
+
+            ADAPTER:
                 {
                     "add_qry_closing_string": 1,
-                    "format_string": ""
-                }
+                    "format_string": " of {}"
+                },
         }
-        self.search_folder = DEFAULT_SEARCH_FOLDER
-        objects_hierarchy_dict = self._relevance_property_format_string_dict.get('object_hierarchy')
-        objects_list = list(objects_hierarchy_dict.keys())
-        self._master_obj = objects_list[0]
-        self.get_master_obj_of_obs_exp(expression.comparison_expression, objects_list)
-        relevance_query = self._parse_expression(expression.comparison_expression)
+        condition_addition_for_split_attr = {ADAPTER: ['loopback of it = false', 'address of it != "0.0.0.0"']}
         self.qualifier_string = self._parse_time_range(qualifier, self._master_obj,
                                                        self._relevance_property_format_string_dict,
                                                        self._time_range, self._time_range_comparator_list)
@@ -558,20 +666,51 @@ class RelevanceQueryStringPatternTranslator:
                 relevance_query += ' AND ' + self.qualifier_string
             else:
                 relevance_query += self.qualifier_string
+        if self._master_obj in condition_addition_for_split_attr:
+            relevance_query += ' AND '+'({})'.format(' AND '.join(
+                condition_addition_for_split_attr.get(self._master_obj)))
         relevance_query = WHOSE_STRING.format(relevance_query) if relevance_query else ''
         closing_relevance_string = relevance_qry_termination_string.get(self._master_obj).get('format_string') if \
             relevance_qry_termination_string.get(self._master_obj).get('add_qry_closing_string') and \
             relevance_qry_termination_string.get(self._master_obj).get('format_string') else ""
         if self._master_obj == FILE:
-            closing_relevance_string = closing_relevance_string.format(*('', self.search_folder) if
-                                                                       self.search_folder == DEFAULT_SEARCH_FOLDER
-                                                                       else (SEARCH_FOLDER, self.search_folder))
-        elif self._master_obj == SOCKET:
+            closing_relevance_string = closing_relevance_string.format(
+                *('', self.search_folder) if (self.search_folder == DEFAULT_SEARCH_FOLDER)
+                else (SEARCH_FOLDER, self.search_folder))
+        elif self._master_obj in [SOCKET, ADAPTER]:
             closing_relevance_string = closing_relevance_string.format(NETWORK)
         final_comparison_exp = self.clean_format_string(self._stix_object_format_string_lookup_dict.
                                                         get(self._master_obj)).format(relevance_query)
         final_comparison_exp += closing_relevance_string
-        self.qualified_queries.append(final_comparison_exp)
+        return final_comparison_exp
+
+    def __eval_observation_exp(self, expression, qualifier):
+        """
+        Function for parsing observation expression and form the complete relevance query
+        :param expression: expression object, ANTLR parsed expression object
+        :param qualifier: str | None
+        :return: None
+        """
+        # Initializing all instance variable at observation expression level
+        self._master_obj = None
+        self._split_master_obj_list = []
+        self._relevance_query_for_split_attr = []
+        self.search_folder = DEFAULT_SEARCH_FOLDER
+        objects_hierarchy_dict = self._relevance_property_format_string_dict.get('object_hierarchy')
+        objects_list = list(objects_hierarchy_dict.keys())
+        self.get_master_obj_of_obs_exp(expression.comparison_expression, objects_list)
+        relevance_query = self._parse_expression(expression.comparison_expression)
+        if self._master_obj:
+            final_comparison_exp = self.__eval_obs_exp_subroutine(relevance_query, qualifier)
+            self.qualified_queries.append(final_comparison_exp)
+        # Below code is for splitting the observation expression into multiple observation expression
+        # in the event of mac address attribute provided as input along with other attributes
+        if self._relevance_query_for_split_attr:
+            for index, each_obj in enumerate(self._split_master_obj_list):
+                self._master_obj = each_obj
+                final_comparison_exp = self.__eval_obs_exp_subroutine(self._relevance_query_for_split_attr[index],
+                                                                      qualifier)
+                self.qualified_queries.append(final_comparison_exp)
 
     def parse_expression(self, pattern: Pattern):
         """

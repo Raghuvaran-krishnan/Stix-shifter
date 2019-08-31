@@ -40,5 +40,10 @@
       "src_ref.value": ["socket.local address"],
       "dst_ref.value": ["socket.remote address"]
     }
+  },
+  "mac-addr": {
+    "fields": {
+      "value": ["adapter.mac address"]
+    }
   }
 }

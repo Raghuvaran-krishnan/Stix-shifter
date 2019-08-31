@@ -12,8 +12,7 @@
       "text" : "processes",
       "reference" :
       {
-        "file" : "image file",
-        "user" : "user"
+        "file" : "image file"
       }
     },
     "socket": {
@@ -22,9 +21,6 @@
       {
         "process" : "processes"
       }
-    },
-    "user": {
-      "text" : "user"
     }
   }
 }
