@@ -462,8 +462,14 @@ class RelevanceQueryStringPatternTranslator:
         """
         if current_obj in self._relevance_property_format_string_dict.get('object_hierarchy'):
             if current_obj != master_obj:
-                parent_obj_references_dict = self._relevance_property_format_string_dict.get('object_hierarchy').\
-                    get(master_obj).get('reference')
+                try:
+                    parent_obj_references_dict = self._relevance_property_format_string_dict.get('object_hierarchy').\
+                        get(master_obj).get('reference')
+                except AttributeError:
+                    # The exception catch is in the event of mac address value given with network-traffic:src-ref
+                    master_obj = 'socket'
+                    parent_obj_references_dict = self._relevance_property_format_string_dict.get('object_hierarchy'). \
+                        get(master_obj).get('reference')
                 if parent_obj_references_dict:
                     for each_key in parent_obj_references_dict:
                         self._relevance_string_list.insert(0, parent_obj_references_dict.get(each_key))
