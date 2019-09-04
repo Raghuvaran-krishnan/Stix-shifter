@@ -5,9 +5,9 @@ from stix_shifter.stix_transmission import stix_transmission
 
 
 class BigFixMockJsonResponse:
-    def __init__(self, response_code, object):
+    def __init__(self, response_code, obj):
         self.code = response_code
-        self.object = object.encode()
+        self.object = obj.encode()
 
     def read(self):
         return self.object
@@ -22,9 +22,9 @@ class MockHttpResponse:
 
 
 class BigFixMockHttpXMLResponse:
-    def __init__(self, response_code, object):
+    def __init__(self, response_code, obj):
         self.code = response_code
-        self.object = object
+        self.object = obj
 
     def read(self):
         return self.object
