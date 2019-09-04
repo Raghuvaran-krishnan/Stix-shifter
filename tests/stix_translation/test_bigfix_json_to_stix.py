@@ -125,7 +125,7 @@ class TestBigFixResultsToStix(unittest.TestCase):
         assert process_obj.keys() == {'type', 'name', 'pid', 'binary_ref'}
         assert process_obj['type'] == 'process'
         assert process_obj['name'] == 'systemd'
-        assert process_obj['pid'] == '1'
+        assert process_obj['pid'] == 1
         assert process_obj['binary_ref'] == '1'
 
     def test_network_json_to_stix(self):
