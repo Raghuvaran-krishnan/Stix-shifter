@@ -134,7 +134,7 @@ class TestStixToRelevance(unittest.TestCase):
         """
         to test single observation with 'LIKE' operator
         """
-        stix_pattern = "[process:name LIKE  'Ec2Con%' AND ipv4-addr:value = '169.254.169.254']"
+        stix_pattern = "[ipv4-addr:value LIKE '169.254']"
         query = translation.translate('bigfix', 'query', '{}', stix_pattern)
         query['queries'] = _remove_timestamp_from_query(query['queries'])
 
@@ -152,14 +152,13 @@ class TestStixToRelevance(unittest.TestCase):
             ' (creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" '
             'as time)/second else  (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan '
             '1970 00:00:00 +0000" as time)/second),  "TCP", tcp of it, "UDP", udp of it)  of sockets whose (((local '
-            'address of it as string = "169.254.169.254" as string OR remote address of it as string = '
-            '"169.254.169.254" as string) AND (name of processes of it as string contains regex"(Ec2Con.*$)" )) AND ('
-            'if (windows of operating system) then (creation time of process of it | "01 Jan 1970 00:00:00 +0000" as '
-            'time is greater than or equal to "03 Sep 2019 17:38:49 +0000" as time AND creation time of process of it '
-            '| "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "03 Sep 2019 17:43:49 +0000" as time) '
-            'else (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "03 '
-            'Sep 2019 17:38:49 +0000" as time AND start time of process of it | "01 Jan 1970 00:00:00 +0000" as time '
-            'is less than or equal to "03 Sep 2019 17:43:49 +0000" as time))) of '
+            'address of it as string contains "169.254" as string OR remote address of it as string contains '
+            '"169.254" as string)) AND (if (windows of operating system) then (creation time of process of it | "01 '
+            'Jan 1970 00:00:00 +0000" as time is greater than or equal to "04 Sep 2019 11:38:50 +0000" as time AND '
+            'creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "04 Sep '
+            '2019 11:43:50 +0000" as time) else (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time '
+            'is greater than or equal to "04 Sep 2019 11:38:50 +0000" as time AND start time of process of it | "01 '
+            'Jan 1970 00:00:00 +0000" as time is less than or equal to "04 Sep 2019 11:43:50 +0000" as time))) of '
             'network</QueryText><Target><CustomRelevance>true</CustomRelevance></Target></ClientQuery></BESAPI>']
         queries = _remove_timestamp_from_query(queries)
         self._test_query_assertions(query, queries)
@@ -271,11 +270,10 @@ class TestStixToRelevance(unittest.TestCase):
         """
         to test 3 observation expression
         """
-        stix_pattern = "([process:name = 'systemd' AND file:hashes.'SHA-256' = " \
-                       "'58da5f0548e6a0889855d29fc839199b6e9e81cb945713d9ada586fcf7baee5a'] AND [file:name LIKE " \
-                       "'rc.status' AND file:parent_directory_ref.path = '/etc'] OR [file:hashes.'SHA-256' = " \
-                       "'97cc7eaf9e5b1e36eaf1f94bdb3b571e950aba38514f07d299f39719c9b91785' AND process:name = " \
-                       "'systemd-udevd']) START t'2012-04-10T08:43:10.003Z' STOP t'2020-04-23T10:43:10.003Z'"
+        stix_pattern = "([process:name = 'systemd' AND process:binary_ref.hashes.'SHA-256' = " \
+                       "'2f2f74f4083b95654a742a56a6c7318f3ab378c94b69009ceffc200fbc22d4d8'] AND [file:name LIKE " \
+                       "'rc.status' AND file:parent_directory_ref.path = '/etc'] OR [ipv4-addr:value LIKE '169.254'])"\
+                       "START t'2012-04-10T08:43:10.003Z' STOP t'2020-04-23T10:43:10.003Z'"
         query = translation.translate('bigfix', 'query', '{}', stix_pattern)
         query['queries'] = _remove_timestamp_from_query(query['queries'])
 
@@ -290,40 +288,44 @@ class TestStixToRelevance(unittest.TestCase):
             '"01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second else  (start time '
             'of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second))  of '
             'processes whose (((sha256 of image file of it as string = '
-            '"58da5f0548e6a0889855d29fc839199b6e9e81cb945713d9ada586fcf7baee5a" as string) AND (name of it as '
+            '"2f2f74f4083b95654a742a56a6c7318f3ab378c94b69009ceffc200fbc22d4d8" as string) AND (name of it as '
             'lowercase = "systemd" as lowercase)) AND (if (windows of operating system) then (creation time of it | '
-            '"01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "29 Aug 2019 15:04:53 +0000" as time '
-            'AND creation time of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "29 Aug 2019 '
-            '15:09:53 +0000" as time) else (start time of it | "01 Jan 1970 00:00:00 +0000" as time is greater than '
-            'or equal to "29 Aug 2019 15:04:53 +0000" as time AND start time of it | "01 Jan 1970 00:00:00 +0000" as '
-            'time is less than or equal to "29 Aug 2019 15:09:53 +0000" as '
+            '"01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Apr 2012 08:43:10 +0000" as time '
+            'AND creation time of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Apr 2020 '
+            '10:43:10 +0000" as time) else (start time of it | "01 Jan 1970 00:00:00 +0000" as time is greater than '
+            'or equal to "10 Apr 2012 08:43:10 +0000" as time AND start time of it | "01 Jan 1970 00:00:00 +0000" as '
+            'time is less than or equal to "23 Apr 2020 10:43:10 +0000" as '
             'time)))</QueryText><Target><CustomRelevance>true</CustomRelevance></Target></ClientQuery></BESAPI>',
             '<BESAPI xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
             'xsi:noNamespaceSchemaLocation="BESAPI.xsd"><ClientQuery><ApplicabilityRelevance>true'
             '</ApplicabilityRelevance><QueryText>("file", name of it | "n/a",  "sha256", sha256 of it | "n/a",  '
             '"sha1", sha1 of it | "n/a",  "md5", md5 of it | "n/a",  pathname of it | "n/a",  size of it | 0,  '
             '(modification time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of files whose (((name of it as '
-            'string contains "rc.status" as string)) AND (modification time of it is greater than or equal to "29 Aug '
-            '2019 15:04:53 +0000" as time AND modification time of it is less than or equal to "29 Aug 2019 15:09:53 '
+            'string contains "rc.status" as string)) AND (modification time of it is greater than or equal to "10 Apr '
+            '2012 08:43:10 +0000" as time AND modification time of it is less than or equal to "23 Apr 2020 10:43:10 '
             '+0000" as time)) of folder "/etc"</QueryText><Target><CustomRelevance>true</CustomRelevance></Target'
             '></ClientQuery></BESAPI>',
             '<BESAPI xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
             'xsi:noNamespaceSchemaLocation="BESAPI.xsd"><ClientQuery><ApplicabilityRelevance>true'
-            '</ApplicabilityRelevance><QueryText>("process", name of it | "n/a",  pid of it as string | "n/a",  '
-            '"sha256", sha256 of image file of it | "n/a",  "sha1", sha1 of image file of it | "n/a",  "md5", '
-            'md5 of image file of it | "n/a",  pathname of image file of it | "n/a",  ppid of it as string | "n/a",  '
-            '(if (windows of operating system) then  user of it as string | "n/a"  else name of user of it as string '
-            '| "n/a"),  size of image file of it | 0,  (if (windows of operating system) then  (creation time of it | '
-            '"01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second else  (start time '
-            'of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second))  of '
-            'processes whose (((name of it as string = "systemd-udevd" as string) AND (sha256 of image file of it as '
-            'string = "97cc7eaf9e5b1e36eaf1f94bdb3b571e950aba38514f07d299f39719c9b91785" as string)) AND (if (windows '
-            'of operating system) then (creation time of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or '
-            'equal to "29 Aug 2019 15:04:53 +0000" as time AND creation time of it | "01 Jan 1970 00:00:00 +0000" as '
-            'time is less than or equal to "29 Aug 2019 15:09:53 +0000" as time) else (start time of it | "01 Jan '
-            '1970 00:00:00 +0000" as time is greater than or equal to "29 Aug 2019 15:04:53 +0000" as time AND start '
-            'time of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "29 Aug 2019 15:09:53 +0000" '
-            'as time)))</QueryText><Target><CustomRelevance>true</CustomRelevance></Target></ClientQuery></BESAPI>']
+            '</ApplicabilityRelevance><QueryText>("Local Address", local address of it as string | "n/a",  '
+            '"Remote Address", remote address of it as string | "n/a",  "Local port", local port of it | -1,  '
+            '"remote port", remote port of it | -1,  "Process name", names of processes of it,  pid of process of it '
+            'as string | "n/a",  "sha256", sha256 of image files of processes of it | "n/a",  "sha1", sha1 of image '
+            'files of processes of it | "n/a",  "md5", md5 of image files of processes of it | "n/a",  pathname of '
+            'image files of processes of it | "n/a",  ppid of process of it as string | "n/a",  (if (windows of '
+            'operating system) then  user of processes of it as string | "n/a"  else name of user of processes of it '
+            'as string | "n/a"),  size of image files of processes of it | 0,  (if (windows of operating system) then '
+            ' (creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" '
+            'as time)/second else  (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan '
+            '1970 00:00:00 +0000" as time)/second),  "TCP", tcp of it, "UDP", udp of it)  of sockets whose (((local '
+            'address of it as string contains "169.254" as string OR remote address of it as string contains '
+            '"169.254" as string)) AND (if (windows of operating system) then (creation time of process of it | "01 '
+            'Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Apr 2012 08:43:10 +0000" as time AND '
+            'creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Apr '
+            '2020 10:43:10 +0000" as time) else (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time '
+            'is greater than or equal to "10 Apr 2012 08:43:10 +0000" as time AND start time of process of it | "01 '
+            'Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Apr 2020 10:43:10 +0000" as time))) of '
+            'network</QueryText><Target><CustomRelevance>true</CustomRelevance></Target></ClientQuery></BESAPI>']
 
         queries = _remove_timestamp_from_query(queries)
         self._test_query_assertions(query, queries)

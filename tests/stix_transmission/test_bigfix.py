@@ -466,10 +466,10 @@ class TestBigfixConnection(unittest.TestCase):
                                         "computerName": "hclhero.hcl.local",
                                         "subQueryID": 1,
                                         "isFailure": false,
-                                        "result": "process, systemd, 1, sha256, 
-                                        5ecacfffd2f9448c931361a03db937a4ab7454fb800d9d8b41253c931434fe2b, sha1, 
-                                        b6d15bc70b6467d1d5652a589ecdb3acea1796f0, md5, 
-                                        995efcd809f3aa50416916a734277a1f, /usr/lib/systemd/systemd, 0, root, 1612152, 
+                                        "result": "process, systemd, 1, sha256, \
+                                        5ecacfffd2f9448c931361a03db937a4ab7454fb800d9d8b41253c931434fe2b, sha1, \
+                                        b6d15bc70b6467d1d5652a589ecdb3acea1796f0, md5, \
+                                        995efcd809f3aa50416916a734277a1f, /usr/lib/systemd/systemd, 0, root, 1612152, \
                                         1566869191",
                                         "ResponseTime": 0
                                         },
@@ -509,8 +509,8 @@ class TestBigfixConnection(unittest.TestCase):
                                         "computerName": "WIN-N11M78AV7BP",
                                         "subQueryID": 1,
                                         "isFailure": false,
-                                        "result": "Local Address, 192.168.36.10, Remote Address, n/a, Local port, 
-                                        139, remote port, -1, Process name, System, 4, sha256, n/a, sha1, n/a, md5, 
+                                        "result": "Local Address, 192.168.36.10, Remote Address, n/a, Local port,\
+                                        139, remote port, -1, Process name, System, 4, sha256, n/a, sha1, n/a, md5,\
                                         n/a, n/a, ( Creation time, 1565875693 ), TCP, True, UDP, False",
                                         "ResponseTime": 0
                                         },
@@ -599,7 +599,7 @@ class TestBigfixConnection(unittest.TestCase):
         mocked_return_value = """{
                                     "reportingAgents": "100",
                                     "totalResults": "201",
-                                    "results": 
+                                    "results":
                                     [
                                         {
                                             "computerID":12369754,
@@ -613,7 +613,7 @@ class TestBigfixConnection(unittest.TestCase):
                                             "computerName":"DESKTOP-C30V1JF",
                                             "subQueryID":1,
                                             "isFailure":true,
-                                            "result":"12520437.cpx, 0a0feb9eb28bde8cd835716343b03b14, 
+                                            "result":"12520437.cpx, 0a0feb9eb28bde8cd835716343b03b14,\
                                             C:\\\\Windows\\\\system32\\\\12520437.cpx","ResponseTime":62000
                                         }
                                     ]
@@ -637,7 +637,7 @@ class TestBigfixConnection(unittest.TestCase):
         mocked_return_value = """{
                                     "reportingAgents": "100",
                                     "totalResults": "201",
-                                    "results": 
+                                    "results":
                                     [aDAsdadDAS
                                         {
                                             "computerID":12369754,
@@ -651,7 +651,7 @@ class TestBigfixConnection(unittest.TestCase):
                                             "computerName":"DESKTOP-C30V1JF",
                                             "subQueryID":1,
                                             "isFailure":true,
-                                            "result":"12520437.cpx, 0a0feb9eb28bde8cd835716343b03b14, 
+                                            "result":"12520437.cpx, 0a0feb9eb28bde8cd835716343b03b14,\
                                             C:\\\\Windows\\\\system32\\\\12520437.cpx","ResponseTime":62000
                                         }
                                     ]

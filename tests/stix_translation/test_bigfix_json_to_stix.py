@@ -36,7 +36,7 @@ class TestBigFixResultsToStix(unittest.TestCase):
         """
         to check whether the object belongs to respective stix object
         """
-        return TestBigFixResultsToStix.get_first(itr, lambda o: type(o) == dict and o.get('type') == typ)
+        return TestBigFixResultsToStix.get_first(itr, lambda o: isinstance(o, dict) and o.get('type') == typ)
 
     def test_common_prop(self):
         """
@@ -49,7 +49,6 @@ class TestBigFixResultsToStix(unittest.TestCase):
                 "file_path": "/usr/lib/systemd/systemd"}
         result_bundle = json_to_stix_translator.convert_to_stix(
             data_source, map_data, [data], transformers.get_all_transformers(), options)
-        print(json.dumps(result_bundle, indent=2))
         assert result_bundle['type'] == 'bundle'
         result_bundle_objects = result_bundle['objects']
 
@@ -60,7 +59,6 @@ class TestBigFixResultsToStix(unittest.TestCase):
         assert result_bundle_identity['identity_class'] == data_source['identity_class']
 
         observed_data = result_bundle_objects[1]
-        print(observed_data)
         assert observed_data['id'] is not None
         assert observed_data['type'] == "observed-data"
         assert observed_data['created_by_ref'] == result_bundle_identity['id']
@@ -112,7 +110,6 @@ class TestBigFixResultsToStix(unittest.TestCase):
                 "file_path": "/usr/lib/systemd/systemd"}
         result_bundle = json_to_stix_translator.convert_to_stix(
             data_source, map_data, [data], transformers.get_all_transformers(), options)
-        print(json.dumps(result_bundle, indent=2))
         result_bundle_objects = result_bundle['objects']
 
         result_bundle_identity = result_bundle_objects[0]
@@ -140,7 +137,6 @@ class TestBigFixResultsToStix(unittest.TestCase):
                 'start_time': '1565875693', 'protocol': 'tcp'}
         result_bundle = json_to_stix_translator.convert_to_stix(
             data_source, map_data, [data], transformers.get_all_transformers(), options)
-        print(json.dumps(result_bundle, indent=2))
         result_bundle_objects = result_bundle['objects']
 
         result_bundle_identity = result_bundle_objects[0]
@@ -168,7 +164,6 @@ class TestBigFixResultsToStix(unittest.TestCase):
                 'mac': '0a-65-a4-7f-ad-88', 'type': 'Address'}
         result_bundle = json_to_stix_translator.convert_to_stix(
             data_source, map_data, [data], transformers.get_all_transformers(), options)
-        print(json.dumps(result_bundle, indent=2))
         result_bundle_objects = result_bundle['objects']
 
         result_bundle_identity = result_bundle_objects[0]
@@ -194,7 +189,6 @@ class TestBigFixResultsToStix(unittest.TestCase):
                 'start_time': '1565875693', 'protocol': 'tcp'}
         result_bundle = json_to_stix_translator.convert_to_stix(
             data_source, map_data, data, transformers.get_all_transformers(), options)
-        print(json.dumps(result_bundle, indent=2))
         result_bundle_objects = result_bundle['objects']
 
         result_bundle_identity = result_bundle_objects[0]
