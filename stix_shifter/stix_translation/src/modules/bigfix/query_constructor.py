@@ -180,11 +180,11 @@ class RelevanceQueryStringPatternTranslator:
         """
         master_encoding_dict = {'\\': '&#92;'}
         if hasattr(value, 'values') and isinstance(value.values, list):
-            value = [each.replace(key, encode_str) for each in value.element_iterator()
+            value = [str(each).replace(key, encode_str) for each in value.element_iterator()
                      for key, encode_str in master_encoding_dict.items()]
         else:
             for key, encode_str in master_encoding_dict.items():
-                value = value.replace(key, encode_str)
+                value = str(value).replace(key, encode_str)
         return value
 
     @staticmethod
@@ -194,7 +194,7 @@ class RelevanceQueryStringPatternTranslator:
         :param value: str
         :return: list
         """
-        value = value if isinstance(value, list) else [value]
+        value = list(map(str, value)) if isinstance(value, list) else [str(value)]
         value_type = []
         non_combinable_values_attr = ['mac']
         combinable_value_attr = ['ipv4', 'ipv6']
