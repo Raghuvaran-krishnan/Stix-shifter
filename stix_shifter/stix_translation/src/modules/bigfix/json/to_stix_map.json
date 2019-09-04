@@ -33,7 +33,8 @@
     },
     "file_size": {
         "key" : "file.size",
-        "object": "file"
+        "object": "file",
+        "transformer": "ToInteger"
     },
     "process_name": {
         "key": "process.name",
@@ -41,7 +42,8 @@
     },
     "process_id": {
         "key": "process.pid",
-        "object": "process"
+        "object": "process",
+        "transformer": "ToInteger"
     },
    "process_ppid": [
     {
