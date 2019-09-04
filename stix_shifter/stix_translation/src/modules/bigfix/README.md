@@ -137,19 +137,19 @@ BigFix module currently supports limited stix pattern for the BigFix network ada
 ```
 ### Stix pattern:
 ```
-[process:name = 'system']
+[process:name = 'dnsmasq']
 ```
 
 ### Translated relevance query:
 
 ```
-( "process", name of it | "n/a", process id of it as string | "n/a", "sha256", sha256 of image file of it | "n/a", "sha1", sha1 of image file of it | "n/a", "md5", md5 of image file of it | "n/a", pathname of image file of it | "n/a", (start time of it - "01 Jan 1970 00:00:00 +0000" as time)/second ) of processes whose (name of it as lowercase = "system" as lowercase )
+"process", name of it | "n/a",  pid of it as string | "n/a",  "sha256", sha256 of image file of it | "n/a",  "sha1", sha1 of image file of it | "n/a",  "md5", md5 of image file of it | "n/a",  pathname of image file of it | "n/a",  ppid of it as string | "n/a",  (if (windows of operating system) then  user of it as string | "n/a"  else name of user of it as string | "n/a"),  size of image file of it | 0,  (if (windows of operating system) then  (creation time of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second else  (start time of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second))  of processes whose (((name of it as lowercase = "dnsmasq" as lowercase)) AND (if (windows of operating system) then (creation time of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND creation time of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time) else (start time of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND start time of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time)))
 ```
 
 ### Bigfix query result (Result is formatted by stix transmission module):
 
 ```
-[{"computer_identity": "12369754-bigdata4545.canlab.ibm.com", "subQueryID": 1, "start_time": "1541424881", "type": "process", "process_name": "systemd", "process_id": "1", "sha256hash": "74c4ff75e3623e64e3d6620864b69ed1d75fa460e520b88ed234234fsdfsdsdfs", "sha1hash": "916933045c5c91ebcaa325e7f8302f3123123dfgf0000", "md5hash": "28a9beb86c4d4c31ba572805baaa777f", "file_path": "/file/path/systemd"}]
+[{'computer_identity': '1626351170-xlcr.hcl.local', 'subQueryID': 1, 'sha256hash': '31e96c3cf483177865830298305e55cbd8bf7afebecc6bcba78360133cf24140', 'sha1hash': '2043de0a76149d0b9e5a0ee0183c077c9235c1c8', 'md5hash': '05546846517405bcc46c4176c4ddf03a', 'file_path': '/usr/sbin/dnsmasq', 'process_ppid': '1', 'process_user': 'nobody', 'start_time': '1556913019', 'process_name': 'dnsmasq', 'process_id': '3261', 'file_size': '344856', 'type': 'process'}]
 ```
 
 ### Stix observable output:
@@ -157,43 +157,54 @@ BigFix module currently supports limited stix pattern for the BigFix network ada
 ```
 {
     "type": "bundle",
-    "id": "bundle--e50ba76e-b2e4-4afc-8c29-611d752e0d02",
+    "id": "bundle--b9dc8167-6815-43df-86e0-c8854d12c3ad",
     "objects": [
         {
             "type": "identity",
-            "id": "identity--3532c56d-ea72-48be-a2ad-1a53f4c9c6d3",
-            "name": "BigFix",
+            "id": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+            "name": "bigfix",
             "identity_class": "events"
         },
         {
-            "id": "observed-data--f6f39014-7068-40b0-841f-623e8933b071",
+            "id": "observed-data--5012dd69-c3b7-4ab8-b22a-3dcd324bd20c",
             "type": "observed-data",
-            "created_by_ref": "identity--3532c56d-ea72-48be-a2ad-1a53f4c9c6d3",
+            "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
             "objects": {
                 "0": {
-                    "type": "process",
-                    "name": "systemd",
-                    "pid": "1",
-                    "binary_ref": "1"
-                },
-                "1": {
                     "type": "file",
                     "hashes": {
-                        "SHA-256": "9c74c625b2aba7a2e8d8a42e2e94715c355aaafff5556bd5404ba52b726792a6",
-                        "SHA-1": "916933045c5c91ebcaa325e7f8302f3123123dfgf0000",
-                        "MD5": "28a9beb86c4d4c31ba572805baaa777f"
+                        "SHA-256": "31e96c3cf483177865830298305e55cbd8bf7afebecc6bcba78360133cf24140",
+                        "SHA-1": "2043de0a76149d0b9e5a0ee0183c077c9235c1c8",
+                        "MD5": "05546846517405bcc46c4176c4ddf03a"
                     },
-                    "parent_directory_ref": "2"
+                    "parent_directory_ref": "1",
+                    "size": 344856
+                },
+                "1": {
+                    "type": "directory",
+                    "path": "/usr/sbin/dnsmasq"
                 },
                 "2": {
-                    "type": "directory",
-                    "path": "/file/path/systemd"
+                    "type": "process",
+                    "binary_ref": "0",
+                    "parent_ref": "3",
+                    "creator_user_ref": "4",
+                    "name": "dnsmasq",
+                    "pid": 3261
+                },
+                "3": {
+                    "type": "process",
+                    "pid": 1
+                },
+                "4": {
+                    "type": "user-account",
+                    "user_id": "nobody"
                 }
             },
-            "name": "1234567-test.canlab.ibm.com",
-            "created": "2018-11-05T13:34:41.000Z",
-            "first_observed": "2018-11-05T13:34:41.000Z",
-            "last_observed": "2018-11-05T13:34:41.000Z"
+            "name": "1626351170-xlcr.hcl.local",
+            "created": "2019-05-03T19:50:19.000Z",
+            "first_observed": "2019-05-03T19:50:19.000Z",
+            "last_observed": "2019-05-03T19:50:19.000Z"
         }
     ]
 }
@@ -203,59 +214,60 @@ BigFix module currently supports limited stix pattern for the BigFix network ada
 
 ### Stix pattern:
 ```
-[file:name = '*' AND file:parent_directory_ref.path = '/tmp']
+[file:parent_directory_ref.path = '/tmp']
 ```
 
 ### Translated relevance query:
 ```
-("file", name of it | "n/a", "sha256", sha256 of it | "n/a", "sha1", sha1 of it | "n/a", "md5", md5 of it | "n/a", pathname of it | "n/a", (modification time of it - "01 Jan 1970 00:00:00 +0000" as time)/second ) of files of folder ("/tmp")
+"file", name of it | "n/a",  "sha256", sha256 of it | "n/a",  "sha1", sha1 of it | "n/a",  "md5", md5 of it | "n/a",  pathname of it | "n/a",  size of it | 0,  (modification time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of files whose ((modification time of it is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND modification time of it is less than or equal to "23 Oct 2019 10:43:10 +0000" as time)) of folder "/tmp"
 ```
 
 ### Bigfix query result (Result is formatted by stix transmission module):
 ```
-[{"computer_identity": "12369754-bigdata4545.canlab.ibm.com", "subQueryID": 1, "type": "file", "file_name": "test_file.txt", "sha256hash": "7236f966f07259a1de3ee0d48a3ef0ee47c4a551af7f0d76dcabbbb9d6e00940", "sha1hash": "8b5e953be1db90172af66631132f6f27dda402d2", "md5hash": "e5307d27f0eb9a27af8597a1ddc51e89", "file_path": "/tmp/test_file.txt", "modified_time": "1541424894"}]
+[{'computer_identity': '1626351170-xlcr.hcl.local', 'subQueryID': 1, 'sha256hash': '89698504cb73fefacd012843a5ba2e0acda7fd8d5db4efaad22f7fe54fa422f5', 'sha1hash': '41838ed7a546aeefe184fb8515973ffee7c3ba7e', 'md5hash': '958d9ba84826e48094e361102a272fd6', 'file_path': '/tmp/big42E1.tmp', 'file_name': 'big42E1.tmp', 'file_size': '770', 'type': 'file', 'modified_time': '1567046172'}]
 ```
 
 ### Stix observable output:
 ```
 {
     "type": "bundle",
-    "id": "bundle--2b6fc06d-0869-4d0a-bac6-1bdefa5e0870",
+    "id": "bundle--a5804d17-ee3a-4923-8763-391cfd489769",
     "objects": [
         {
             "type": "identity",
-            "id": "identity--3532c56d-ea72-48be-a2ad-1a53f4c9c6d3",
-            "name": "BigFix",
+            "id": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+            "name": "bigfix",
             "identity_class": "events"
         },
         {
-            "id": "observed-data--fb149477-9efe-4646-a831-2d482f314b9b",
+            "id": "observed-data--eba12a00-e1bb-4f30-8f0f-65e44eae2e59",
             "type": "observed-data",
-            "created_by_ref": "identity--3532c56d-ea72-48be-a2ad-1a53f4c9c6d3",
+            "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
             "objects": {
                 "0": {
                     "type": "file",
-                    "name": "test_file.txt",
                     "hashes": {
-                        "SHA-256": "9c74c625b2aba7a2e8d8a42e2e94715c355aaafff5556bd5404ba52b726792a6",
-                        "SHA-1": "916933045c5c91ebcaa325e7f8302f3123123dfgf0000",
-                        "MD5": "28a9beb86c4d4c31ba572805baaa777f"
+                        "SHA-256": "89698504cb73fefacd012843a5ba2e0acda7fd8d5db4efaad22f7fe54fa422f5",
+                        "SHA-1": "41838ed7a546aeefe184fb8515973ffee7c3ba7e",
+                        "MD5": "958d9ba84826e48094e361102a272fd6"
                     },
-                    "parent_directory_ref": "1"
+                    "parent_directory_ref": "1",
+                    "name": "big42E1.tmp",
+                    "size": 770
                 },
                 "1": {
                     "type": "directory",
-                    "path": "/tmp/test_file.txt"
+                    "path": "/tmp/big42E1.tmp"
                 },
                 "2": {
                     "type": "process",
                     "binary_ref": "0"
                 }
             },
-            "name": "1123456-test.canlab.ibm.com",
-            "modified": "2018-11-05T13:34:54.000Z",
-            "first_observed": "2018-11-05T13:34:54.000Z",
-            "last_observed": "2018-11-05T13:34:54.000Z"
+            "name": "1626351170-xlcr.hcl.local",
+            "modified": "2019-08-29T02:36:12.000Z",
+            "first_observed": "2019-08-29T02:36:12.000Z",
+            "last_observed": "2019-08-29T02:36:12.000Z"
         }
     ]
 }
