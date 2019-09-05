@@ -1,65 +1,72 @@
 # BigFix
 
-## Supported stix pattern for file query:
+## BigFix Relevance Query with XML schema:
 
-BigFix module currently supports limited stix patterns for the BigFix file query. Below are some examples of supported pattern and translated relevance query:
+The actual relevance query is wrapped around by XML tag `<QueryText> query string </QueryText>` while calling the BigFix api-
 
-#### Stix patterns:
+```
+<BESAPI xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="BESAPI.xsd"> 
+	<ClientQuery>
+	<ApplicabilityRelevance>true</ApplicabilityRelevance>
+	<QueryText>( name of it | "n/a", process id of it as string | "n/a", sha256 of image file of it | "n/a", pathname of image file of it | "n/a" ) of processes</QueryText>
+	<Target>
+		<CustomRelevance>true</CustomRelevance>
+	</Target>
+	</ClientQuery>
+</BESAPI>
+```
+
+## Example STIX pattern for file query:
+
+#### STIX patterns:
 
   1. `[file:parent_directory_ref.path = '/root']`
   2. `[file:name LIKE '.conf' AND file:parent_directory_ref.path = '/etc']`
   3. `[file:hashes.'SHA-256' = '2584c4ba8b0d2a52d94023f420b7e356a1b1a3f2211111111111122222222333' AND file:parent_directory_ref.path = '/root']`
   4. `[file:name = 'a' AND file:parent_directory_ref.path = '/root' OR file:hashes.'SHA-256' = '2584c4ba8b0d2a52d94023f420b7e356a1b1a3000000444446666666']`
 
-#### Translated relevance query(in the same order as stix patterns):
+#### Translated relevance query(in the same order as STIX patterns):
 
   1. `("file", name of it | "n/a",  "sha256", sha256 of it | "n/a",  "sha1", sha1 of it | "n/a",  "md5", md5 of it | "n/a",  pathname of it | "n/a",  size of it | 0,  (modification time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of files whose ((modification time of it is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND modification time of it is less than or equal to "23 Oct 2019 10:43:10 +0000" as time)) of folder "/root"`
   2. `("file", name of it | "n/a",  "sha256", sha256 of it | "n/a",  "sha1", sha1 of it | "n/a",  "md5", md5 of it | "n/a",  pathname of it | "n/a",  size of it | 0,  (modification time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of files whose (((name of it as string contains ".conf" as string)) AND (modification time of it is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND modification time of it is less than or equal to "23 Oct 2019 10:43:10 +0000" as time)) of folder "/etc"`
   3. `("file", name of it | "n/a",  "sha256", sha256 of it | "n/a",  "sha1", sha1 of it | "n/a",  "md5", md5 of it | "n/a",  pathname of it | "n/a",  size of it | 0,  (modification time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of files whose (((sha256 of it as string = "2584c4ba8b0d2a52d94023f420b7e356a1b1a3f2211111111111122222222333" as string)) AND (modification time of it is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND modification time of it is less than or equal to "23 Oct 2019 10:43:10 +0000" as time)) of folder "/root"`
   4. `("file", name of it | "n/a",  "sha256", sha256 of it | "n/a",  "sha1", sha1 of it | "n/a",  "md5", md5 of it | "n/a",  pathname of it | "n/a",  size of it | 0,  (modification time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of files whose (((sha256 of it as string = "2584c4ba8b0d2a52d94023f420b7e356a1b1a3000000444446666666" as string) OR (name of it as lowercase = "a" as lowercase)) AND (modification time of it is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND modification time of it is less than or equal to "23 Oct 2019 10:43:10 +0000" as time)) of folder "/root"`
 
-## Supported stix pattern for process query:
+## Example STIX pattern for process query:
 
-BigFix module currently supports limited stix patterns for the BigFix process query. Below are some examples of supported pattern and translated relevance query:
-
-#### Stix patterns:
+#### STIX patterns:
 
   1. `[process:name LIKE 'node']`
   2. `[process:name = 'node' OR process:binary_ref.hashes.'SHA-256' = '74c4ff75e3623e64e3d6620864b69ed1d75fa460e520b88ed234234fsdfsdsdfs']`
 
-#### Translated relevance query(in the same order as stix patterns):
+#### Translated relevance query(in the same order as STIX patterns):
 
   1. `("process", name of it | "n/a",  pid of it as string | "n/a",  "sha256", sha256 of image file of it | "n/a",  "sha1", sha1 of image file of it | "n/a",  "md5", md5 of image file of it | "n/a",  pathname of image file of it | "n/a",  ppid of it as string | "n/a",  (if (windows of operating system) then  user of it as string | "n/a"  else name of user of it as string | "n/a"),  size of image file of it | 0,  (if (windows of operating system) then  (creation time of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second else  (start time of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second))  of processes whose (((name of it as string contains "node" as string)) AND (if (windows of operating system) then (creation time of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND creation time of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time) else (start time of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND start time of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time)))`
   2. `("process", name of it | "n/a",  pid of it as string | "n/a",  "sha256", sha256 of image file of it | "n/a",  "sha1", sha1 of image file of it | "n/a",  "md5", md5 of image file of it | "n/a",  pathname of image file of it | "n/a",  ppid of it as string | "n/a",  (if (windows of operating system) then  user of it as string | "n/a"  else name of user of it as string | "n/a"),  size of image file of it | 0,  (if (windows of operating system) then  (creation time of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second else  (start time of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second))  of processes whose (((sha256 of image file of it as string = "74c4ff75e3623e64e3d6620864b69ed1d75fa460e520b88ed234234fsdfsdsdfs" as string) OR (name of it as lowercase = "node" as lowercase)) AND (if (windows of operating system) then (creation time of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND creation time of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time) else (start time of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND start time of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time)))`
   
- ## Supported stix pattern for network query:
+ ## Example STIX pattern for network query:
 
-BigFix module currently supports limited stix patterns for the BigFix network query. Below are some examples of supported pattern and translated relevance query:
-
-#### Stix patterns:
+#### STIX patterns:
 
   1. `[ipv4-addr:value LIKE '192' AND network-traffic:src_port > 300]`
 
-#### Translated relevance query(in the same order as stix patterns):
+#### Translated relevance query(in the same order as STIX patterns):
 
   1. `("Local Address", local address of it as string | "n/a",  "Remote Address", remote address of it as string | "n/a",  "Local port", local port of it | -1,  "remote port", remote port of it | -1,  "Process name", names of processes of it,  pid of process of it as string | "n/a",  "sha256", sha256 of image files of processes of it | "n/a",  "sha1", sha1 of image files of processes of it | "n/a",  "md5", md5 of image files of processes of it | "n/a",  pathname of image files of processes of it | "n/a",  ppid of process of it as string | "n/a",  (if (windows of operating system) then  user of processes of it as string | "n/a"  else name of user of processes of it as string | "n/a"),  size of image files of processes of it | 0,  (if (windows of operating system) then  (creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second else  (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second),  "TCP", tcp of it, "UDP", udp of it)  of sockets whose (((local port of it is greater than 300 ) AND (local address of it as string contains "192" as string OR remote address of it as string contains "192" as string)) AND (if (windows of operating system) then (creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time) else (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND start time of process of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time))) of network`
 
-## Supported stix pattern for network adapter query:
+## Example STIX pattern for mac address query:
 
-BigFix module currently supports limited stix pattern for the BigFix network adapter query. Below are some examples of supported pattern and translated relevance query:
-
-#### Stix patterns:
+#### STIX patterns:
 
   1. `[mac-addr:value = '0a-65-a4-7f-ad-88' AND ipv4-addr:value = '192.168.2.3']`
 
-#### Translated relevance query(in the same order as stix patterns):
+#### Translated relevance query(in the same order as STIX patterns):
 #### Splits into 2 queries
 
   1. `("Local Address", local address of it as string | "n/a",  "Remote Address", remote address of it as string | "n/a",  "Local port", local port of it | -1,  "remote port", remote port of it | -1,  "Process name", names of processes of it,  pid of process of it as string | "n/a",  "sha256", sha256 of image files of processes of it | "n/a",  "sha1", sha1 of image files of processes of it | "n/a",  "md5", md5 of image files of processes of it | "n/a",  pathname of image files of processes of it | "n/a",  ppid of process of it as string | "n/a",  (if (windows of operating system) then  user of processes of it as string | "n/a"  else name of user of processes of it as string | "n/a"),  size of image files of processes of it | 0,  (if (windows of operating system) then  (creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second else  (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second),  "TCP", tcp of it, "UDP", udp of it)  of sockets whose (((local address of it as string = "192.168.2.3" as string OR remote address of it as string = "192.168.2.3" as string)) AND (if (windows of operating system) then (creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time) else (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND start time of process of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time))) of network`
   2. `("Address", address of it as string | "n/a",  mac address of it as string | "n/a") of adapters whose ((mac address of it as string = "0a-65-a4-7f-ad-88" as string) AND (loopback of it = false AND address of it != "0.0.0.0")) of network`
-## Relevance query for processes:
 
-### Stix pattern:
+### Translate, Transmit, Translate Result flow of a STIX pattern:
 ```
 [ipv4-addr:value LIKE = '192']
 ```
@@ -69,14 +76,32 @@ BigFix module currently supports limited stix pattern for the BigFix network ada
 ```
 ("Local Address", local address of it as string | "n/a",  "Remote Address", remote address of it as string | "n/a",  "Local port", local port of it | -1,  "remote port", remote port of it | -1,  "Process name", names of processes of it,  pid of process of it as string | "n/a",  "sha256", sha256 of image files of processes of it | "n/a",  "sha1", sha1 of image files of processes of it | "n/a",  "md5", md5 of image files of processes of it | "n/a",  pathname of image files of processes of it | "n/a",  ppid of process of it as string | "n/a",  (if (windows of operating system) then  user of processes of it as string | "n/a"  else name of user of processes of it as string | "n/a"),  size of image files of processes of it | 0,  (if (windows of operating system) then  (creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second else  (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second),  "TCP", tcp of it, "UDP", udp of it)  of sockets whose (((local address of it as string contains "192" as string OR remote address of it as string contains "192" as string)) AND (if (windows of operating system) then (creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND creation time of process of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time) else (start time of process of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND start time of process of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time))) of network
 ```
+### As BigFix is an as-synchronous connector the above translated relevance query is passed as parameter to STIX transmission module
 
-### Bigfix query result (Result is formatted by stix transmission module):
+```
+transmit
+"bigfix"
+"{\"host\":\"xx.xx.xx.xx\", \"port\":\"xxxxx\", \"cert_verify\":\"False\"}"
+"{\"auth\":{\"username\":\"xxxxx\",\"password\":\"xxxxxx\"}}"
+query
+"<BESAPI xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"BESAPI.xsd\"><ClientQuery><ApplicabilityRelevance>true</ApplicabilityRelevance><QueryText>(\"Local Address\", local address of it as string | \"n/a\",  \"Remote Address\", remote address of it as string | \"n/a\",  \"Local port\", local port of it | -1,  \"remote port\", remote port of it | -1,  \"Process name\", names of processes of it,  pid of process of it as string | \"n/a\",  \"sha256\", sha256 of image files of processes of it | \"n/a\",  \"sha1\", sha1 of image files of processes of it | \"n/a\",  \"md5\", md5 of image files of processes of it | \"n/a\",  pathname of image files of processes of it | \"n/a\",  ppid of process of it as string | \"n/a\",  (if (windows of operating system) then  user of processes of it as string | \"n/a\"  else name of user of processes of it as string | \"n/a\"),  size of image files of processes of it | 0,  (if (windows of operating system) then  (creation time of process of it | \"01 Jan 1970 00:00:00 +0000\" as time -  \"01 Jan 1970 00:00:00 +0000\" as time)/second else  (start time of process of it | \"01 Jan 1970 00:00:00 +0000\" as time -  \"01 Jan 1970 00:00:00 +0000\" as time)/second),  \"TCP\", tcp of it, \"UDP\", udp of it)  of sockets whose (((local address of it as string contains \"192\" as string OR remote address of it as string contains \"192\" as string)) AND (if (windows of operating system) then (creation time of process of it | \"01 Jan 1970 00:00:00 +0000\" as time is greater than or equal to \"10 Jan 2013 08:43:10 +0000\" as time AND creation time of process of it | \"01 Jan 1970 00:00:00 +0000\" as time is less than or equal to \"23 Oct 2019 10:43:10 +0000\" as time) else (start time of process of it | \"01 Jan 1970 00:00:00 +0000\" as time is greater than or equal to \"10 Jan 2013 08:43:10 +0000\" as time AND start time of process of it | \"01 Jan 1970 00:00:00 +0000\" as time is less than or equal to \"23 Oct 2019 10:43:10 +0000\" as time))) of network</QueryText><Target><CustomRelevance>true</CustomRelevance></Target></ClientQuery></BESAPI>"
+
+```
+### A search_id is returned which is further passed to STIX transmission result module 
+```
+{'search_id': '4191', 'success': True}
+```
+### Transmit get result
+```
+transmit bigfix "{\"host\":\"xx.xx.xx.xx\", \"port\":\"xxxxx\", \"cert_verify\":\"False\"}" {\"auth\":{\"username\":\"hclapi\",\"password\":\"jnGfdEYY8T$e\"}} results 4191 <offset> <length> 
+```
+### BigFix query result (Result is formatted by STIX transmission result module):
 
 ```
 [{'computer_identity': '550872812-WIN-N11M78AV7BP', 'subQueryID': 1, 'local_address': '192.168.36.10', 'local_port': '139', 'process_ppid': '0', 'process_user': 'NT AUTHORITY\\SYSTEM', 'start_time': '1565875693', 'process_name': 'System', 'process_id': '4', 'type': 'Socket', 'protocol': 'udp'}]
 ```
 
-### Stix observable output:
+### STIX observable output:
 
 ```
  {
@@ -135,7 +160,7 @@ BigFix module currently supports limited stix pattern for the BigFix network ada
     ]
 }
 ```
-### Stix pattern:
+### STIX pattern:
 ```
 [process:name = 'dnsmasq']
 ```
@@ -145,14 +170,33 @@ BigFix module currently supports limited stix pattern for the BigFix network ada
 ```
 "process", name of it | "n/a",  pid of it as string | "n/a",  "sha256", sha256 of image file of it | "n/a",  "sha1", sha1 of image file of it | "n/a",  "md5", md5 of image file of it | "n/a",  pathname of image file of it | "n/a",  ppid of it as string | "n/a",  (if (windows of operating system) then  user of it as string | "n/a"  else name of user of it as string | "n/a"),  size of image file of it | 0,  (if (windows of operating system) then  (creation time of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second else  (start time of it | "01 Jan 1970 00:00:00 +0000" as time -  "01 Jan 1970 00:00:00 +0000" as time)/second))  of processes whose (((name of it as lowercase = "dnsmasq" as lowercase)) AND (if (windows of operating system) then (creation time of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND creation time of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time) else (start time of it | "01 Jan 1970 00:00:00 +0000" as time is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND start time of it | "01 Jan 1970 00:00:00 +0000" as time is less than or equal to "23 Oct 2019 10:43:10 +0000" as time)))
 ```
+### As BigFix is an as-synchronous connector the above translated relevance query is passed as parameter to STIX transmission module
 
-### Bigfix query result (Result is formatted by stix transmission module):
+```
+transmit
+"bigfix"
+"{\"host\":\"xx.xx.xx.xx\", \"port\":\"xxxxx\", \"cert_verify\":\"False\"}"
+"{\"auth\":{\"username\":\"xxxxx\",\"password\":\"xxxxxx\"}}"
+query
+"<BESAPI xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"BESAPI.xsd\"><ClientQuery><ApplicabilityRelevance>true</ApplicabilityRelevance><QueryText>(\"process\", name of it | \"n/a\",  pid of it as string | \"n/a\",  \"sha256\", sha256 of image file of it | \"n/a\",  \"sha1\", sha1 of image file of it | \"n/a\",  \"md5\", md5 of image file of it | \"n/a\",  pathname of image file of it | \"n/a\",  ppid of it as string | \"n/a\",  (if (windows of operating system) then  user of it as string | \"n/a\"  else name of user of it as string | \"n/a\"),  size of image file of it | 0,  (if (windows of operating system) then  (creation time of it | \"01 Jan 1970 00:00:00 +0000\" as time -  \"01 Jan 1970 00:00:00 +0000\" as time)/second else  (start time of it | \"01 Jan 1970 00:00:00 +0000\" as time -  \"01 Jan 1970 00:00:00 +0000\" as time)/second))  of processes whose (((name of it as lowercase = \"dnsmasq\" as lowercase)) AND (if (windows of operating system) then (creation time of it | \"01 Jan 1970 00:00:00 +0000\" as time is greater than or equal to \"10 Jan 2013 08:43:10 +0000\" as time AND creation time of it | \"01 Jan 1970 00:00:00 +0000\" as time is less than or equal to \"23 Oct 2019 10:43:10 +0000\" as time) else (start time of it | \"01 Jan 1970 00:00:00 +0000\" as time is greater than or equal to \"10 Jan 2013 08:43:10 +0000\" as time AND start time of it | \"01 Jan 1970 00:00:00 +0000\" as time is less than or equal to \"23 Oct 2019 10:43:10 +0000\" as time)))</QueryText><Target><CustomRelevance>true</CustomRelevance></Target></ClientQuery></BESAPI>"
+
+```
+### A search_id is returned which is further passed to STIX transmission result module 
+```
+{'search_id': '4192', 'success': True}
+```
+### Transmit get result
+```
+transmit bigfix "{\"host\":\"xx.xx.xx.xx\", \"port\":\"xxxxx\", \"cert_verify\":\"False\"}" {\"auth\":{\"username\":\"hclapi\",\"password\":\"jnGfdEYY8T$e\"}} results 4192 <offset> <length> 
+```
+
+### Bigfix query result (Result is formatted by STIX transmission module):
 
 ```
 [{'computer_identity': '1626351170-xlcr.hcl.local', 'subQueryID': 1, 'sha256hash': '31e96c3cf483177865830298305e55cbd8bf7afebecc6bcba78360133cf24140', 'sha1hash': '2043de0a76149d0b9e5a0ee0183c077c9235c1c8', 'md5hash': '05546846517405bcc46c4176c4ddf03a', 'file_path': '/usr/sbin/dnsmasq', 'process_ppid': '1', 'process_user': 'nobody', 'start_time': '1556913019', 'process_name': 'dnsmasq', 'process_id': '3261', 'file_size': '344856', 'type': 'process'}]
 ```
 
-### Stix observable output:
+### STIX observable output:
 
 ```
 {
@@ -212,7 +256,7 @@ BigFix module currently supports limited stix pattern for the BigFix network ada
 
 ## Relevance query for files:
 
-### Stix pattern:
+### STIX pattern:
 ```
 [file:parent_directory_ref.path = '/tmp']
 ```
@@ -221,13 +265,32 @@ BigFix module currently supports limited stix pattern for the BigFix network ada
 ```
 "file", name of it | "n/a",  "sha256", sha256 of it | "n/a",  "sha1", sha1 of it | "n/a",  "md5", md5 of it | "n/a",  pathname of it | "n/a",  size of it | 0,  (modification time of it - "01 Jan 1970 00:00:00 +0000" as time)/second) of files whose ((modification time of it is greater than or equal to "10 Jan 2013 08:43:10 +0000" as time AND modification time of it is less than or equal to "23 Oct 2019 10:43:10 +0000" as time)) of folder "/tmp"
 ```
+### As BigFix is an as-synchronous connector the above translated relevance query is passed as parameter to STIX transmission module
 
-### Bigfix query result (Result is formatted by stix transmission module):
+```
+transmit
+"bigfix"
+"{\"host\":\"xx.xx.xx.xx\", \"port\":\"xxxxx\", \"cert_verify\":\"False\"}"
+"{\"auth\":{\"username\":\"xxxxx\",\"password\":\"xxxxxx\"}}"
+query
+"<BESAPI xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"BESAPI.xsd\"><ClientQuery><ApplicabilityRelevance>true</ApplicabilityRelevance><QueryText>(\"file\", name of it | \"n/a\",  \"sha256\", sha256 of it | \"n/a\",  \"sha1\", sha1 of it | \"n/a\",  \"md5\", md5 of it | \"n/a\",  pathname of it | \"n/a\",  size of it | 0,  (modification time of it - \"01 Jan 1970 00:00:00 +0000\" as time)/second) of files whose ((modification time of it is greater than or equal to \"10 Jan 2013 08:43:10 +0000\" as time AND modification time of it is less than or equal to \"23 Oct 2019 10:43:10 +0000\" as time)) of folder \"/tmp\"</QueryText><Target><CustomRelevance>true</CustomRelevance></Target></ClientQuery></BESAPI>"
+
+```
+### A search_id is returned which is further passed to STIX transmission result module 
+```
+{'search_id': '4193', 'success': True}
+```
+### Transmit get result
+```
+transmit bigfix "{\"host\":\"xx.xx.xx.xx\", \"port\":\"xxxxx\", \"cert_verify\":\"False\"}" {\"auth\":{\"username\":\"hclapi\",\"password\":\"jnGfdEYY8T$e\"}} results 4193 <offset> <length>
+```
+
+### Bigfix query result (Result is formatted by STIX transmission module):
 ```
 [{'computer_identity': '1626351170-xlcr.hcl.local', 'subQueryID': 1, 'sha256hash': '89698504cb73fefacd012843a5ba2e0acda7fd8d5db4efaad22f7fe54fa422f5', 'sha1hash': '41838ed7a546aeefe184fb8515973ffee7c3ba7e', 'md5hash': '958d9ba84826e48094e361102a272fd6', 'file_path': '/tmp/big42E1.tmp', 'file_name': 'big42E1.tmp', 'file_size': '770', 'type': 'file', 'modified_time': '1567046172'}]
 ```
 
-### Stix observable output:
+### STIX observable output:
 ```
 {
     "type": "bundle",
@@ -271,20 +334,4 @@ BigFix module currently supports limited stix pattern for the BigFix network ada
         }
     ]
 }
-```
-
-## BigFix Relevance Query with XML schema:
-
-The actual relevance query is wrapped around by XML tag `<QueryText> query string </QueryText>` while calling the BigFix api-
-
-```
-<BESAPI xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="BESAPI.xsd"> 
-	<ClientQuery>
-	<ApplicabilityRelevance>true</ApplicabilityRelevance>
-	<QueryText>( name of it | "n/a", process id of it as string | "n/a", sha256 of image file of it | "n/a", pathname of image file of it | "n/a" ) of processes</QueryText>
-	<Target>
-		<CustomRelevance>true</CustomRelevance>
-	</Target>
-	</ClientQuery>
-</BESAPI>
 ```
